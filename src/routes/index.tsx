@@ -19,6 +19,10 @@ import AddAgencyPage from './agencies/add';
 import ViewAgencyPage from './agencies/view';
 import EditAgencyPage from './agencies/edit';
 import NotFound from './NotFound';
+import ReportsPage from './reports';
+import CreateReportPage from './reports/add';
+import ViewReportPage from './reports/view';
+import EditReportPage from './reports/edit';
 
 const AppRoutes = () => {
   return (
@@ -50,6 +54,11 @@ const AppRoutes = () => {
       <Route path="/payment" element={<PaymentPage />} />
       <Route path="/payment/detail/:id" element={<PaymentDetailPage />} />
       <Route path="/payment/add" element={<AddPaymentReceipt />} />
+      
+      <Route path="/reports" element={<ReportsPage />} />
+      <Route path="/reports/add" element={<CreateReportPage />} />
+      <Route path="/reports/view/:id" element={<ViewReportPage />} />
+      <Route path="/reports/edit/:id" element={<EditReportPage />} />
       
       {/* 404 page */}
       <Route path="*" element={<NotFound />} />

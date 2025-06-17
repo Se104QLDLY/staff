@@ -91,6 +91,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
       label: 'Quản lý thanh toán',
       path: '/payment',
     },
+    {
+      icon: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M9 2a1 1 0 00-1 1v2.382a1 1 0 01-.553.894l-5.447 2.724A1 1 0 002 10.618V17a1 1 0 001 1h14a1 1 0 001-1v-6.382a1 1 0 00-.553-.894l-5.447-2.724A1 1 0 0112 5.382V3a1 1 0 00-1-1H9zm1 4.618l5 2.5V16H5v-6.882l5-2.5z" /></svg>,
+      label: 'Lập báo cáo',
+      path: '/reports',
+    },
   ];
   
   return (

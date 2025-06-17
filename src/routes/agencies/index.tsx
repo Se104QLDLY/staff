@@ -20,8 +20,6 @@ interface Agency {
 
 const AgencyPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [agencyToDelete, setAgencyToDelete] = useState<Agency | null>(null);
   const navigate = useNavigate();
 
   // Mock data for agencies
@@ -63,37 +61,6 @@ const AgencyPage: React.FC = () => {
     agency.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
     agency.district.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleDeleteClick = (agency: Agency) => {
-    setAgencyToDelete(agency);
-    setShowDeleteModal(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (agencyToDelete) {
-      try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Remove from local state
-        setAgencies(agencies.filter(a => a.id !== agencyToDelete.id));
-        
-        // Close modal and reset
-        setShowDeleteModal(false);
-        setAgencyToDelete(null);
-        
-        alert(`Đã xóa đại lý ${agencyToDelete.code} thành công!`);
-      } catch (error) {
-        console.error('Error deleting agency:', error);
-        alert('Có lỗi xảy ra khi xóa đại lý!');
-      }
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setShowDeleteModal(false);
-    setAgencyToDelete(null);
-  };
 
   return (
     <DashboardLayout>
@@ -182,12 +149,6 @@ const AgencyPage: React.FC = () => {
                         <span className="hidden sm:inline">Chỉnh sửa</span>
                         <span className="sm:hidden">Sửa</span>
                       </Link>
-                      <button
-                        onClick={() => handleDeleteClick(agency)}
-                        className="px-2 sm:px-3 py-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 rounded-lg transition-colors whitespace-nowrap"
-                      >
-                        Xóa
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -199,41 +160,6 @@ const AgencyPage: React.FC = () => {
         {filteredAgencies.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">Không tìm thấy đại lý nào.</p>
-          </div>
-        )}
-
-        {/* Delete Confirmation Modal */}
-        {showDeleteModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-              <div className="text-center">
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Xác nhận xóa đại lý</h3>
-                <p className="text-gray-600 mb-6">
-                  Bạn có chắc chắn muốn xóa đại lý <strong>{agencyToDelete?.code} - {agencyToDelete?.name}</strong>?
-                  <br />
-                  <span className="text-sm text-red-600">Hành động này không thể hoàn tác.</span>
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleDeleteCancel}
-                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
-                  >
-                    Hủy bỏ
-                  </button>
-                  <button
-                    onClick={handleDeleteConfirm}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
-                  >
-                    Xóa đại lý
-                  </button>
-                </div>
-              </div>
-            </div>
           </div>
         )}
       </div>

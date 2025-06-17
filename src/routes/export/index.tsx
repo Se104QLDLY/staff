@@ -10,6 +10,15 @@ interface ExportItem {
   creator: string;
   createdDate: string;
   updatedDate: string;
+  status?: 'pending' | 'confirmed'; // Thêm trạng thái xác nhận
+}
+
+interface ExportRequest {
+  code: string;
+  agency: string;
+  exportDate: string;
+  totalAmount: number;
+  creator: string;
 }
 
 const ExportPage: React.FC = () => {
@@ -19,27 +28,51 @@ const ExportPage: React.FC = () => {
   const [endDate, setEndDate] = useState<string>('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<ExportItem | null>(null);
+  const [showRequestModal, setShowRequestModal] = useState(false);
 
   const [exportItems, setExportItems] = useState<ExportItem[]>([
-  {
-    code: 'PX001',
-    agency: 'Đại lý A',
-    exportDate: '2024-01-15',
-    totalAmount: 18500000,
-    creator: 'Nguyễn Văn A',
-    createdDate: '2024-01-15',
-    updatedDate: '2024-01-15',
-  },
-  {
-    code: 'PX002',
-    agency: 'Đại lý B',
-    exportDate: '2024-01-14',
-    totalAmount: 25700000,
-    creator: 'Trần Thị B',
-    createdDate: '2024-01-14',
-    updatedDate: '2024-01-14',
-  },
+    {
+      code: 'PX001',
+      agency: 'Đại lý A',
+      exportDate: '2024-01-15',
+      totalAmount: 18500000,
+      creator: 'Nguyễn Văn A',
+      createdDate: '2024-01-15',
+      updatedDate: '2024-01-15',
+      status: 'pending', // Chưa xác nhận
+    },
+    {
+      code: 'PX002',
+      agency: 'Đại lý B',
+      exportDate: '2024-01-14',
+      totalAmount: 25700000,
+      creator: 'Trần Thị B',
+      createdDate: '2024-01-14',
+      updatedDate: '2024-01-14',
+      status: 'confirmed', // Đã xác nhận
+    },
   ]);
+
+  // Danh sách yêu cầu xuất hàng (pending)
+  const [exportRequests, setExportRequests] = useState<ExportRequest[]>([
+    {
+      code: 'YEUCAU001',
+      agency: 'Đại lý C',
+      exportDate: '2024-01-20',
+      totalAmount: 9900000,
+      creator: 'Nguyễn Văn C',
+    },
+    {
+      code: 'YEUCAU002',
+      agency: 'Đại lý D',
+      exportDate: '2024-01-21',
+      totalAmount: 12300000,
+      creator: 'Trần Thị D',
+    },
+  ]);
+
+  // Danh sách yêu cầu đã xác nhận nhưng chưa lập phiếu xuất
+  const [confirmedRequests, setConfirmedRequests] = useState<ExportRequest[]>([]);
 
   // Filter logic
   const filteredItems = exportItems.filter(item => {
@@ -96,21 +129,64 @@ const ExportPage: React.FC = () => {
     setItemToDelete(null);
   };
 
+  // Khi xác nhận yêu cầu xuất hàng
+  const handleConfirmRequest = (code: string) => {
+    const req = exportRequests.find(r => r.code === code);
+    if (req) {
+      setConfirmedRequests(list => [req, ...list]);
+      setExportRequests(requests => requests.filter(r => r.code !== code));
+    }
+  };
+
+  // Khi lập phiếu xuất từ yêu cầu đã xác nhận
+  const handleCreateExportFromRequest = (code: string) => {
+    const req = confirmedRequests.find(r => r.code === code);
+    if (req) {
+      setExportItems(items => [
+        {
+          code: req.code.replace('YEUCAU', 'PX'),
+          agency: req.agency,
+          exportDate: req.exportDate,
+          totalAmount: 0, // hoặc nhập số tiền khi lập phiếu
+          creator: '', // hoặc nhập người tạo khi lập phiếu
+          createdDate: req.exportDate,
+          updatedDate: req.exportDate,
+          status: 'confirmed',
+        },
+        ...items
+      ]);
+      setConfirmedRequests(list => list.filter(r => r.code !== code));
+    }
+  };
+
+  // Khi từ chối yêu cầu xuất hàng
+  const handleRejectRequest = (code: string) => {
+    setExportRequests(requests => requests.filter(r => r.code !== code));
+  };
+
   return (
     <DashboardLayout>
       <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-blue-100">
         <div className="flex flex-wrap gap-4 mb-8 justify-between items-center">
           <h1 className="text-3xl font-extrabold text-blue-800 drop-shadow uppercase tracking-wide">Quản lý xuất hàng</h1>
-          <Link
-            to="/export/add"
-            className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            <span className="hidden sm:inline">Tạo phiếu xuất</span>
-            <span className="sm:hidden">Thêm</span>
-          </Link>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setShowRequestModal(true)}
+              className="px-4 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
+            >
+              Xác nhận các đại lý
+            </button>
+            <Link
+              to="/export/add"
+              className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              <span className="hidden sm:inline">Tạo phiếu xuất</span>
+              <span className="sm:hidden">Thêm</span>
+            </Link>
+          </div>
         </div>
 
         {/* Filters */}
@@ -197,6 +273,7 @@ const ExportPage: React.FC = () => {
                         <span className="hidden sm:inline">Chỉnh sửa</span>
                         <span className="sm:hidden">Sửa</span>
                       </Link>
+                      {/* Đã bỏ nút xác nhận trong danh sách phiếu xuất, chỉ còn trong modal xác nhận yêu cầu */}
                       <button
                         onClick={() => handleDeleteClick(item)}
                         className="px-2 sm:px-3 py-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 rounded-lg transition-colors whitespace-nowrap"
@@ -248,6 +325,92 @@ const ExportPage: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal xác nhận yêu cầu xuất hàng */}
+        {showRequestModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 shadow-2xl">
+              <div className="text-center mb-4">
+                <h2 className="text-2xl font-bold text-blue-800 mb-2">Yêu cầu xuất hàng từ đại lý</h2>
+                <p className="text-gray-600 mb-4">Danh sách các đại lý gửi yêu cầu xuất hàng, xác nhận để lập phiếu xuất.</p>
+              </div>
+              <table className="min-w-full bg-white border border-blue-200 mb-4">
+                <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
+                  <tr className="uppercase text-sm">
+                    <th className="px-4 py-2">Mã yêu cầu</th>
+                    <th className="px-4 py-2">Đại lý</th>
+                    <th className="px-4 py-2">Ngày yêu cầu</th>
+                    <th className="px-4 py-2">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {exportRequests.length === 0 ? (
+                    <tr><td colSpan={4} className="text-center py-4 text-gray-500">Không có yêu cầu nào.</td></tr>
+                  ) : exportRequests.map(req => (
+                    <tr key={req.code} className="border-b hover:bg-blue-50">
+                      <td className="px-4 py-2 font-semibold">{req.code}</td>
+                      <td className="px-4 py-2">{req.agency}</td>
+                      <td className="px-4 py-2">{req.exportDate}</td>
+                      <td className="px-4 py-2">
+                        <button
+                          onClick={() => handleConfirmRequest(req.code)}
+                          className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold mr-2"
+                        >
+                          Xác nhận
+                        </button>
+                        <button
+                          onClick={() => handleRejectRequest(req.code)}
+                          className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 font-semibold"
+                        >
+                          Từ chối
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {/* Danh sách yêu cầu đã xác nhận nhưng chưa lập phiếu xuất */}
+              {confirmedRequests.length > 0 && (
+                <>
+                  <h3 className="text-lg font-bold text-blue-700 mt-6 mb-2">Yêu cầu đã xác nhận</h3>
+                  <table className="min-w-full bg-white border border-blue-200 mb-4">
+                    <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
+                      <tr className="uppercase text-sm">
+                        <th className="px-4 py-2">Mã yêu cầu</th>
+                        <th className="px-4 py-2">Đại lý</th>
+                        <th className="px-4 py-2">Ngày yêu cầu</th>
+                        <th className="px-4 py-2">Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {confirmedRequests.map(req => (
+                        <tr key={req.code} className="border-b hover:bg-blue-50">
+                          <td className="px-4 py-2 font-semibold">{req.code}</td>
+                          <td className="px-4 py-2">{req.agency}</td>
+                          <td className="px-4 py-2">{req.exportDate}</td>
+                          <td className="px-4 py-2">
+                            <button
+                              onClick={() => handleCreateExportFromRequest(req.code)}
+                              className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
+                            >
+                              Lập phiếu xuất
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </>
+              )}
+              <button
+                onClick={() => setShowRequestModal(false)}
+                className="mt-2 px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"
+              >
+                Đóng
+              </button>
             </div>
           </div>
         )}
