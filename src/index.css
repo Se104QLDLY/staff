@@ -1,0 +1,213 @@
+@import "tailwindcss";
+
+@layer base {
+  html {
+    font-family: system-ui, sans-serif;
+  }
+}
+
+/* Custom styles nếu cần */
+
+:root {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Loại bỏ các thiết lập body mặc định có thể gây vấn đề */
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+}
+
+/* Custom utilities for text handling and responsive design */
+@layer utilities {
+  /* Text handling utilities */
+  .text-truncate-ellipsis {
+    @apply truncate;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .text-pretty {
+    text-wrap: pretty;
+  }
+  
+  .break-words-safe {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  
+  /* Table specific utilities */
+  .table-cell-nowrap {
+    @apply whitespace-nowrap;
+    min-width: fit-content;
+  }
+  
+  .table-cell-truncate {
+    @apply truncate;
+    max-width: 0;
+    width: 100%;
+  }
+  
+  /* Button utilities for responsive design */
+  .btn-responsive {
+    @apply px-2 py-1 text-xs;
+    @apply sm:px-3 sm:py-2 sm:text-sm;
+    @apply whitespace-nowrap;
+  }
+  
+  .btn-text-responsive {
+    @apply inline-block;
+  }
+  
+  .btn-text-responsive .btn-text-full {
+    @apply hidden sm:inline;
+  }
+  
+  .btn-text-responsive .btn-text-short {
+    @apply sm:hidden;
+  }
+  
+  /* Container utilities for better spacing */
+  .table-container {
+    @apply overflow-x-auto;
+    @apply min-w-0; /* Allows flex items to shrink below content size */
+  }
+  
+  /* Mobile-first table adjustments */
+  .table-mobile-stack {
+    @apply block;
+    @apply sm:table;
+  }
+  
+  .table-mobile-stack thead {
+    @apply hidden;
+    @apply sm:table-header-group;
+  }
+  
+  .table-mobile-stack tbody {
+    @apply block;
+    @apply sm:table-row-group;
+  }
+  
+  .table-mobile-stack tr {
+    @apply block border-b border-gray-200 pb-4 mb-4;
+    @apply sm:table-row sm:border-none sm:pb-0 sm:mb-0;
+  }
+  
+  .table-mobile-stack td {
+    @apply block text-right border-none;
+    @apply sm:table-cell sm:text-left sm:border;
+    padding-left: 50%;
+    position: relative;
+  }
+  
+  .table-mobile-stack td:before {
+    content: attr(data-label);
+    position: absolute;
+    left: 6px;
+    width: 45%;
+    text-align: left;
+    font-weight: bold;
+    @apply text-gray-600;
+  }
+  
+  @screen sm {
+    .table-mobile-stack td:before {
+      content: none;
+    }
+    
+    .table-mobile-stack td {
+      padding-left: inherit;
+    }
+  }
+  
+  /* Status badge utilities */
+  .status-badge {
+    @apply px-2 py-1 rounded-full text-xs font-bold;
+    @apply sm:px-3 sm:text-sm;
+    @apply whitespace-nowrap;
+  }
+  
+  /* Responsive text utilities */
+  .responsive-text {
+    @apply text-sm;
+    @apply sm:text-base;
+  }
+  
+  .responsive-title {
+    @apply text-lg;
+    @apply sm:text-xl;
+    @apply md:text-2xl;
+  }
+  
+  /* Grid utilities for better responsive behavior */
+  .responsive-grid {
+    @apply grid grid-cols-1;
+    @apply sm:grid-cols-2;
+    @apply md:grid-cols-3;
+    @apply lg:grid-cols-4;
+    @apply xl:grid-cols-6;
+  }
+  
+  /* Action button container */
+  .action-buttons {
+    @apply flex flex-col gap-1;
+    @apply sm:flex-row sm:gap-2;
+    @apply items-stretch sm:items-center;
+  }
+  
+  /* Tooltip utilities for truncated text */
+  .has-tooltip {
+    @apply relative;
+  }
+  
+  .has-tooltip:hover .tooltip {
+    @apply opacity-100 visible;
+  }
+  
+  .tooltip {
+    @apply absolute bottom-full left-1/2 transform -translate-x-1/2;
+    @apply bg-gray-900 text-white text-xs rounded py-1 px-2;
+    @apply opacity-0 invisible transition-opacity duration-200;
+    @apply whitespace-nowrap;
+    @apply z-50;
+    margin-bottom: 4px;
+  }
+  
+  .tooltip:after {
+    content: '';
+    @apply absolute top-full left-1/2 transform -translate-x-1/2;
+    border: 4px solid transparent;
+    border-top-color: theme('colors.gray.900');
+  }
+}
