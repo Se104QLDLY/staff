@@ -10,10 +10,8 @@ import ExportPage from './export';
 import ExportDetailPage from './export/detail';
 import AddExportPage from './export/add';
 import EditExportPage from './export/edit';
-import SearchPage from './search';
 import PaymentPage from './payment';
 import PaymentDetailPage from './payment/detail';
-import AddPaymentReceipt from './payment/add';
 import AgencyPage from './agencies';
 import AddAgencyPage from './agencies/add';
 import ViewAgencyPage from './agencies/view';
@@ -49,11 +47,8 @@ const AppRoutes = () => {
       <Route path="/export/add" element={<AddExportPage />} />
       <Route path="/export/edit/:id" element={<EditExportPage />} />
       
-      <Route path="/search" element={<SearchPage />} />
-      
       <Route path="/payment" element={<PaymentPage />} />
       <Route path="/payment/detail/:id" element={<PaymentDetailPage />} />
-      <Route path="/payment/add" element={<AddPaymentReceipt />} />
       
       <Route path="/reports" element={<ReportsPage />} />
       <Route path="/reports/add" element={<CreateReportPage />} />

@@ -4,12 +4,8 @@ import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
 interface ImportRecord {
   id: string;
-  agency: string;
   importDate: string;
   totalAmount: string;
-  creator: string;
-  createdDate: string;
-  updatedDate: string;
 }
 
 const ImportManagementPage: React.FC = () => {
@@ -22,29 +18,20 @@ const ImportManagementPage: React.FC = () => {
   const [importRecords, setImportRecords] = useState<ImportRecord[]>([
     {
       id: 'PN001',
-      agency: 'Đại lý A',
       importDate: '2024-01-15',
       totalAmount: '15,000,000',
-      creator: 'Nguyễn Văn A',
-      createdDate: '2024-01-15',
-      updatedDate: '2024-01-15',
     },
     {
       id: 'PN002',
-      agency: 'Đại lý B',
       importDate: '2024-01-14',
       totalAmount: '22,500,000',
-      creator: 'Trần Thị B',
-      createdDate: '2024-01-14',
-      updatedDate: '2024-01-14',
     },
   ]);
 
   const filteredRecords = importRecords.filter(
     (record) =>
       (!fromDate || new Date(record.importDate) >= new Date(fromDate)) &&
-      (!toDate || new Date(record.importDate) <= new Date(toDate)) &&
-      (!selectedAgency || record.agency === selectedAgency)
+      (!toDate || new Date(record.importDate) <= new Date(toDate))
   );
 
   const handleDeleteClick = (record: ImportRecord) => {
@@ -87,16 +74,6 @@ const ImportManagementPage: React.FC = () => {
         
         {/* Filters and Add Button */}
         <div className="flex flex-wrap gap-4 mb-8 justify-between items-center">
-          <select 
-            value={selectedAgency}
-            onChange={(e) => setSelectedAgency(e.target.value)}
-            className="px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
-          >
-            <option value="">Tất cả đại lý</option>
-            {agencies.map(agency => (
-              <option key={agency} value={agency}>{agency}</option>
-            ))}
-          </select>
           <input
             type="date"
             placeholder="Từ ngày"
@@ -129,12 +106,8 @@ const ImportManagementPage: React.FC = () => {
             <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
               <tr className="uppercase text-sm">
                 <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px]">Mã phiếu nhập</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[150px]">Đại lý</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px]">Ngày nhập</th>
+                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px]">Ngày lập phiếu</th>
                 <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px]">Tổng tiền</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden md:table-cell">Người tạo</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden lg:table-cell">Ngày tạo</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden xl:table-cell">Cập nhật</th>
                 <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px]">Thao tác</th>
               </tr>
             </thead>
@@ -142,20 +115,8 @@ const ImportManagementPage: React.FC = () => {
               {filteredRecords.map((record) => (
                 <tr key={record.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{record.id}</td>
-                  <td className="px-4 py-3 text-gray-800">
-                    <div className="max-w-[150px] truncate" title={record.agency}>
-                      {record.agency}
-                    </div>
-                  </td>
                   <td className="px-4 py-3 text-gray-800 whitespace-nowrap">{new Date(record.importDate).toLocaleDateString('vi-VN')}</td>
                   <td className="px-4 py-3 text-gray-800 font-semibold whitespace-nowrap">{record.totalAmount} VND</td>
-                  <td className="px-4 py-3 text-gray-800 hidden md:table-cell">
-                    <div className="max-w-[120px] truncate" title={record.creator}>
-                      {record.creator}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden lg:table-cell">{new Date(record.createdDate).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden xl:table-cell">{new Date(record.updatedDate).toLocaleDateString('vi-VN')}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                       <Link

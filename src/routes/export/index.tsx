@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
+import { Loading } from '../../components/common';
 
 interface ExportItem {
   code: string;
@@ -73,6 +74,9 @@ const ExportPage: React.FC = () => {
 
   // Danh sách yêu cầu đã xác nhận nhưng chưa lập phiếu xuất
   const [confirmedRequests, setConfirmedRequests] = useState<ExportRequest[]>([]);
+
+  // State lưu trạng thái kiểm tra tồn kho cho từng yêu cầu
+  const [stockCheck, setStockCheck] = useState<Record<string, 'not_checked' | 'in_stock' | 'out_of_stock' | 'checking'>>({});
 
   // Filter logic
   const filteredItems = exportItems.filter(item => {
@@ -164,6 +168,21 @@ const ExportPage: React.FC = () => {
     setExportRequests(requests => requests.filter(r => r.code !== code));
   };
 
+  // Hàm kiểm tra tồn kho (random, có loading)
+  const handleCheckStock = (code: string) => {
+    setStockCheck(prev => ({
+      ...prev,
+      [code]: 'checking',
+    }));
+    setTimeout(() => {
+      const inStock = Math.random() > 0.5;
+      setStockCheck(prev => ({
+        ...prev,
+        [code]: inStock ? 'in_stock' : 'out_of_stock',
+      }));
+    }, 1000);
+  };
+
   return (
     <DashboardLayout>
       <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-blue-100">
@@ -232,11 +251,8 @@ const ExportPage: React.FC = () => {
               <tr className="uppercase text-sm">
                 <th className="px-6 py-3 text-left whitespace-nowrap min-w-[120px]">Mã phiếu xuất</th>
                 <th className="px-6 py-3 text-left whitespace-nowrap min-w-[150px]">Đại lý</th>
-                <th className="px-6 py-3 text-left whitespace-nowrap min-w-[100px]">Ngày xuất</th>
+                <th className="px-6 py-3 text-left whitespace-nowrap min-w-[100px]">Ngày lập phiếu</th>
                 <th className="px-6 py-3 text-left whitespace-nowrap min-w-[120px]">Tổng tiền</th>
-                <th className="px-6 py-3 text-left whitespace-nowrap min-w-[100px] hidden md:table-cell">Người tạo</th>
-                <th className="px-6 py-3 text-left whitespace-nowrap min-w-[100px] hidden lg:table-cell">Ngày tạo</th>
-                <th className="px-6 py-3 text-left whitespace-nowrap min-w-[100px] hidden xl:table-cell">Cập nhật</th>
                 <th className="px-6 py-3 text-left whitespace-nowrap min-w-[120px]">Thao tác</th>
               </tr>
             </thead>
@@ -251,13 +267,6 @@ const ExportPage: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-gray-700 whitespace-nowrap">{new Date(item.exportDate).toLocaleDateString('vi-VN')}</td>
                   <td className="px-6 py-4 text-gray-700 font-semibold whitespace-nowrap">{item.totalAmount.toLocaleString('vi-VN')} VND</td>
-                  <td className="px-6 py-4 text-gray-700 hidden md:table-cell">
-                    <div className="max-w-[120px] truncate" title={item.creator}>
-                      {item.creator}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-gray-700 whitespace-nowrap hidden lg:table-cell">{new Date(item.createdDate).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-6 py-4 text-gray-700 whitespace-nowrap hidden xl:table-cell">{new Date(item.updatedDate).toLocaleDateString('vi-VN')}</td>
                   <td className="px-6 py-4">
                     <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                       <Link
@@ -273,7 +282,6 @@ const ExportPage: React.FC = () => {
                         <span className="hidden sm:inline">Chỉnh sửa</span>
                         <span className="sm:hidden">Sửa</span>
                       </Link>
-                      {/* Đã bỏ nút xác nhận trong danh sách phiếu xuất, chỉ còn trong modal xác nhận yêu cầu */}
                       <button
                         onClick={() => handleDeleteClick(item)}
                         className="px-2 sm:px-3 py-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 rounded-lg transition-colors whitespace-nowrap"
@@ -355,18 +363,39 @@ const ExportPage: React.FC = () => {
                       <td className="px-4 py-2">{req.agency}</td>
                       <td className="px-4 py-2">{req.exportDate}</td>
                       <td className="px-4 py-2">
-                        <button
-                          onClick={() => handleConfirmRequest(req.code)}
-                          className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold mr-2"
-                        >
-                          Xác nhận
-                        </button>
-                        <button
-                          onClick={() => handleRejectRequest(req.code)}
-                          className="px-3 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 font-semibold"
-                        >
-                          Từ chối
-                        </button>
+                        {/* Nếu chưa kiểm tra tồn kho */}
+                        {(!stockCheck[req.code] || stockCheck[req.code] === 'not_checked') && (
+                          <button
+                            onClick={() => handleCheckStock(req.code)}
+                            className="px-3 py-1 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 font-semibold mr-2"
+                          >
+                            Kiểm tra tồn kho
+                          </button>
+                        )}
+                        {/* Loading khi đang kiểm tra tồn kho */}
+                        {stockCheck[req.code] === 'checking' && (
+                          <div className="flex items-center gap-2">
+                            <Loading size="sm" text="Đang kiểm tra..." />
+                          </div>
+                        )}
+                        {/* Nếu đã kiểm tra và còn hàng */}
+                        {stockCheck[req.code] === 'in_stock' && (
+                          <button
+                            onClick={() => handleConfirmRequest(req.code)}
+                            className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold mr-2"
+                          >
+                            Xác nhận
+                          </button>
+                        )}
+                        {/* Nếu đã kiểm tra và hết hàng */}
+                        {stockCheck[req.code] === 'out_of_stock' && (
+                          <button
+                            disabled
+                            className="px-3 py-1 bg-gray-400 text-white rounded-lg font-semibold mr-2 cursor-not-allowed"
+                          >
+                            Tạm hoãn
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}

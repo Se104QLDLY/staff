@@ -4,6 +4,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
+import type { SubmitHandler } from 'react-hook-form';
 
 interface ImportProduct {
   productName: string;
@@ -13,9 +14,8 @@ interface ImportProduct {
 }
 
 interface ImportFormData {
-  agency: string;
+  importId: string;
   importDate: string;
-  note?: string;
   products: ImportProduct[];
   status: 'Hoàn thành' | 'Đang xử lý' | 'Hủy';
 }
@@ -27,12 +27,11 @@ const productSchema = yup.object({
   unitPrice: yup.number().required('Đơn giá là bắt buộc').min(1000, 'Đơn giá phải ít nhất 1,000 VND'),
 });
 
-const schema = yup.object({
-  agency: yup.string().required('Đại lý là bắt buộc'),
-  importDate: yup.string().required('Ngày nhập hàng là bắt buộc'),
-  note: yup.string(),
-  products: yup.array().of(productSchema).min(1, 'Phải có ít nhất một sản phẩm'),
-  status: yup.string().required('Trạng thái là bắt buộc'),
+const schema: yup.ObjectSchema<ImportFormData> = yup.object({
+  importId: yup.string().required('Mã phiếu nhập là bắt buộc'),
+  importDate: yup.string().required('Ngày lập phiếu là bắt buộc'),
+  products: yup.array().of(productSchema).min(1, 'Phải có ít nhất một sản phẩm').required(),
+  status: yup.mixed<'Hoàn thành' | 'Đang xử lý' | 'Hủy'>().oneOf(['Hoàn thành', 'Đang xử lý', 'Hủy']).required('Trạng thái là bắt buộc'),
 });
 
 const EditImportPage: React.FC = () => {
@@ -49,8 +48,11 @@ const EditImportPage: React.FC = () => {
   } = useForm<ImportFormData>({
     resolver: yupResolver(schema),
     defaultValues: {
-      products: [{ productName: '', unit: '', quantity: 1, unitPrice: 0 }]
-    }
+      importId: '',
+      importDate: '',
+      status: 'Hoàn thành',
+      products: [{ productName: '', unit: '', quantity: 1, unitPrice: 0 }],
+    },
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -63,9 +65,7 @@ const EditImportPage: React.FC = () => {
   // Mock existing data
   const existingData = {
     id: id || 'PN001',
-    agency: 'DL001',
     importDate: '2024-01-15',
-    note: 'Nhập hàng theo đơn đặt hàng tháng 1/2024',
     status: 'Hoàn thành' as const,
     products: [
       {
@@ -85,14 +85,13 @@ const EditImportPage: React.FC = () => {
 
   // Load existing data
   useEffect(() => {
-    setValue('agency', existingData.agency);
+    setValue('importId', existingData.id);
     setValue('importDate', existingData.importDate);
-    setValue('note', existingData.note);
     setValue('status', existingData.status);
     setValue('products', existingData.products);
   }, [setValue]);
 
-  const onSubmit = async (data: ImportFormData) => {
+  const onSubmit: SubmitHandler<ImportFormData> = async (data) => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       console.log('Updated import data:', data);
@@ -109,12 +108,6 @@ const EditImportPage: React.FC = () => {
       return total + (product.quantity || 0) * (product.unitPrice || 0);
     }, 0) || 0;
   };
-
-  const agencies = [
-    { code: 'DL001', name: 'Đại lý Minh Anh' },
-    { code: 'DL002', name: 'Đại lý Thành Công' },
-    { code: 'DL003', name: 'Đại lý Hồng Phúc' }
-  ];
 
   const units = ['Thùng', 'Hộp', 'Chai', 'Gói', 'Kg', 'Lít', 'Cái'];
 
@@ -158,27 +151,21 @@ const EditImportPage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
               <div>
                 <label className="block text-blue-700 font-semibold mb-2">
-                  Đại lý <span className="text-red-500">*</span>
+                  Mã phiếu nhập <span className="text-red-500">*</span>
                 </label>
-                <select
-                  {...register('agency')}
+                <input
+                  type="text"
+                  {...register('importId')}
                   className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
-                >
-                  <option value="">Chọn đại lý</option>
-                  {agencies.map((agency) => (
-                    <option key={agency.code} value={agency.code}>
-                      {agency.code} - {agency.name}
-                    </option>
-                  ))}
-                </select>
-                {errors.agency && (
-                  <span className="text-red-500 text-sm mt-1">{errors.agency.message}</span>
+                />
+                {errors.importId && (
+                  <span className="text-red-500 text-sm mt-1">{errors.importId.message}</span>
                 )}
               </div>
 
               <div>
                 <label className="block text-blue-700 font-semibold mb-2">
-                  Ngày nhập hàng <span className="text-red-500">*</span>
+                  Ngày lập phiếu <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="date"
@@ -198,23 +185,13 @@ const EditImportPage: React.FC = () => {
                   {...register('status')}
                   className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
                 >
-                  <option value="Đang xử lý">Đang xử lý</option>
                   <option value="Hoàn thành">Hoàn thành</option>
+                  <option value="Đang xử lý">Đang xử lý</option>
                   <option value="Hủy">Hủy</option>
                 </select>
                 {errors.status && (
                   <span className="text-red-500 text-sm mt-1">{errors.status.message}</span>
                 )}
-              </div>
-
-              <div className="lg:col-span-3">
-                <label className="block text-blue-700 font-semibold mb-2">Ghi chú</label>
-                <textarea
-                  {...register('note')}
-                  rows={3}
-                  placeholder="Ghi chú về phiếu nhập (tùy chọn)"
-                  className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm resize-none"
-                />
               </div>
             </div>
           </div>

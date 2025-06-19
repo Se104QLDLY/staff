@@ -114,20 +114,8 @@ const ViewImportPage: React.FC = () => {
                   <p className="bg-white px-4 py-2 rounded-lg border text-gray-800 font-semibold">{importRecord.id}</p>
                 </div>
                 <div>
-                  <label className="block text-blue-700 font-semibold mb-1">Ngày nhập hàng</label>
+                  <label className="block text-blue-700 font-semibold mb-1">Ngày lập phiếu</label>
                   <p className="bg-white px-4 py-2 rounded-lg border text-gray-800">{new Date(importRecord.importDate).toLocaleDateString('vi-VN')}</p>
-                </div>
-                <div>
-                  <label className="block text-blue-700 font-semibold mb-1">Đại lý</label>
-                  <p className="bg-white px-4 py-2 rounded-lg border text-gray-800 font-semibold">{importRecord.agency}</p>
-                </div>
-                <div>
-                  <label className="block text-blue-700 font-semibold mb-1">Mã đại lý</label>
-                  <p className="bg-white px-4 py-2 rounded-lg border text-gray-800">{importRecord.agencyCode}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-blue-700 font-semibold mb-1">Ghi chú</label>
-                  <p className="bg-white px-4 py-3 rounded-lg border text-gray-700 leading-relaxed">{importRecord.note || 'Không có ghi chú'}</p>
                 </div>
               </div>
             </div>
@@ -139,16 +127,18 @@ const ViewImportPage: React.FC = () => {
                 <table className="w-full bg-white border border-green-200 rounded-lg">
                   <thead className="bg-green-100">
                     <tr>
-                      <th className="px-4 py-3 text-left text-green-800 font-semibold">Tên sản phẩm</th>
-                      <th className="px-4 py-3 text-left text-green-800 font-semibold">Đơn vị</th>
+                      <th className="px-4 py-3 text-left text-green-800 font-semibold">STT</th>
+                      <th className="px-4 py-3 text-left text-green-800 font-semibold">Mặt hàng</th>
+                      <th className="px-4 py-3 text-left text-green-800 font-semibold">Đơn vị tính</th>
                       <th className="px-4 py-3 text-right text-green-800 font-semibold">Số lượng</th>
                       <th className="px-4 py-3 text-right text-green-800 font-semibold">Đơn giá</th>
                       <th className="px-4 py-3 text-right text-green-800 font-semibold">Thành tiền</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-green-100">
-                    {importRecord.products.map((product) => (
+                    {importRecord.products.map((product, idx) => (
                       <tr key={product.id}>
+                        <td className="px-4 py-3 text-gray-700">{idx + 1}</td>
                         <td className="px-4 py-3 font-semibold text-gray-900">{product.productName}</td>
                         <td className="px-4 py-3 text-gray-700">{product.unit}</td>
                         <td className="px-4 py-3 text-right text-gray-700">{product.quantity.toLocaleString('vi-VN')}</td>

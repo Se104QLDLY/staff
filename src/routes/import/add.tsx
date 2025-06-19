@@ -4,12 +4,9 @@ import { DashboardLayout } from '../../components/layout/DashboardLayout';
 const AddImportPage: React.FC = () => {
   const [formData, setFormData] = useState({
     importId: '',
-    agency: '',
     importDate: '',
-    creator: '',
-    createdDate: '',
     products: [
-      { productId: '', productName: '', quantity: 0, unitPrice: 0, totalPrice: 0 },
+      { productName: '', unit: '', quantity: 0, unitPrice: 0, totalPrice: 0 },
     ],
   });
 
@@ -20,18 +17,20 @@ const AddImportPage: React.FC = () => {
 
   const handleProductChange = (index: number, field: string, value: string | number) => {
     const updatedProducts = [...formData.products];
-    updatedProducts[index] = {
-      ...updatedProducts[index],
+    const product = updatedProducts[index] || { productName: '', unit: '', quantity: 0, unitPrice: 0, totalPrice: 0 };
+    const newProduct = {
+      ...product,
       [field]: value,
-      totalPrice: updatedProducts[index].quantity * updatedProducts[index].unitPrice,
     };
+    newProduct.totalPrice = (Number(newProduct.quantity) || 0) * (Number(newProduct.unitPrice) || 0);
+    updatedProducts[index] = newProduct;
     setFormData({ ...formData, products: updatedProducts });
   };
 
   const addProduct = () => {
     setFormData({
       ...formData,
-      products: [...formData.products, { productId: '', productName: '', quantity: 0, unitPrice: 0, totalPrice: 0 }],
+      products: [...formData.products, { productName: '', unit: '', quantity: 0, unitPrice: 0, totalPrice: 0 }],
     });
   };
 
@@ -66,34 +65,11 @@ const AddImportPage: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Đại lý</label>
-              <select
-                name="agency"
-                value={formData.agency}
-                onChange={handleChange}
-                className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Chọn đại lý</option>
-                <option value="Đại lý A">Đại lý A</option>
-                <option value="Đại lý B">Đại lý B</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Ngày nhập</label>
+              <label className="block text-sm font-medium text-gray-700">Ngày lập phiếu</label>
               <input
                 type="date"
                 name="importDate"
                 value={formData.importDate}
-                onChange={handleChange}
-                className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Người tạo</label>
-              <input
-                type="text"
-                name="creator"
-                value={formData.creator}
                 onChange={handleChange}
                 className="mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
               />
@@ -105,8 +81,9 @@ const AddImportPage: React.FC = () => {
             <table className="min-w-full bg-white border border-blue-200">
               <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
                 <tr className="uppercase text-sm">
-                  <th className="py-3 px-4 text-left">Mã sản phẩm</th>
-                  <th className="py-3 px-4 text-left">Tên sản phẩm</th>
+                  <th className="py-3 px-4 text-left">STT</th>
+                  <th className="py-3 px-4 text-left">Mặt hàng</th>
+                  <th className="py-3 px-4 text-left">Đơn vị tính</th>
                   <th className="py-3 px-4 text-left">Số lượng</th>
                   <th className="py-3 px-4 text-left">Đơn giá</th>
                   <th className="py-3 px-4 text-left">Thành tiền</th>
@@ -116,19 +93,20 @@ const AddImportPage: React.FC = () => {
               <tbody className="divide-y divide-blue-100">
                 {formData.products.map((product, index) => (
                   <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">{index + 1}</td>
                     <td className="px-4 py-3">
                       <input
                         type="text"
-                        value={product.productId}
-                        onChange={(e) => handleProductChange(index, 'productId', e.target.value)}
+                        value={product.productName}
+                        onChange={(e) => handleProductChange(index, 'productName', e.target.value)}
                         className="block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
                       />
                     </td>
                     <td className="px-4 py-3">
                       <input
                         type="text"
-                        value={product.productName}
-                        onChange={(e) => handleProductChange(index, 'productName', e.target.value)}
+                        value={product.unit}
+                        onChange={(e) => handleProductChange(index, 'unit', e.target.value)}
                         className="block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500"
                       />
                     </td>
