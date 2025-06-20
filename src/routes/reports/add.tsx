@@ -79,7 +79,7 @@ const AddReportPage: React.FC = () => {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Report Type */}
-            <div>
+          <div>
               <label className="block text-blue-700 font-semibold mb-2">Loại báo cáo *</label>
               <select
                 {...register('type')}
@@ -95,11 +95,11 @@ const AddReportPage: React.FC = () => {
               {errors.type && (
                 <span className="text-red-500 text-sm mt-1">{errors.type.message}</span>
               )}
-            </div>
+          </div>
             {/* Report Period */}
-            <div>
+          <div>
               <label className="block text-blue-700 font-semibold mb-2">Kỳ báo cáo *</label>
-              <select
+            <select
                 {...register('period')}
                 className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-lg bg-blue-50"
               >
@@ -109,7 +109,7 @@ const AddReportPage: React.FC = () => {
                 <option value="monthly">Theo tháng</option>
                 <option value="quarterly">Theo quý</option>
                 <option value="yearly">Theo năm</option>
-              </select>
+            </select>
               {errors.period && (
                 <span className="text-red-500 text-sm mt-1">{errors.period.message}</span>
               )}
@@ -125,11 +125,11 @@ const AddReportPage: React.FC = () => {
               {errors.startDate && (
                 <span className="text-red-500 text-sm mt-1">{errors.startDate.message}</span>
               )}
-            </div>
+          </div>
             {/* End Date */}
-            <div>
+          <div>
               <label className="block text-blue-700 font-semibold mb-2">Ngày kết thúc *</label>
-              <input
+            <input
                 type="date"
                 {...register('endDate')}
                 className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-lg bg-blue-50"

@@ -205,15 +205,31 @@ const ReportsPage: React.FC = () => {
         </div>
         <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
           <h2 className="text-2xl font-bold text-blue-800 drop-shadow">Danh sách báo cáo</h2>
-          <Link
-            to="/reports/add"
-            className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Lập báo cáo
-          </Link>
+          <div className="flex gap-2">
+            <button
+              onClick={() => alert('Chức năng đang phát triển')}
+              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-bold text-base shadow"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+              Xuất Excel
+            </button>
+            <button
+              onClick={() => alert('Chức năng đang phát triển')}
+              className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-bold text-base shadow"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7v4a2 2 0 01-2 2H7a2 2 0 01-2-2V7" /></svg>
+              Xuất PDF
+            </button>
+            <Link
+              to="/reports/add"
+              className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Lập báo cáo
+            </Link>
+          </div>
         </div>
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-blue-100">
           <div className="overflow-x-auto">
@@ -224,7 +240,7 @@ const ReportsPage: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Tiêu đề</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Loại</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Kỳ báo cáo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Dữ liệu báo cáo</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Dữ liệu chính</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Trạng thái</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Người tạo</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Ngày tạo</th>
@@ -238,7 +254,12 @@ const ReportsPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.title}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{getTypeBadge(report.type)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.period}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{formatCurrency(report.amount || 0)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {report.type === 'Doanh thu' && <span>Doanh số: {formatCurrency(report.amount || 0)}</span>}
+                      {report.type === 'Công nợ' && <span>Số tiền công nợ: {formatCurrency(report.amount || 0)}</span>}
+                      {report.type === 'Tồn kho' && <span>Số lượng tồn: {report.amount || 0}</span>}
+                      {report.type === 'Hoạt động' && <span>Mô tả: {report.description || '-'}</span>}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(report.status)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.creator}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.createdDate}</td>
