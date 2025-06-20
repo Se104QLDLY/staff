@@ -6,12 +6,14 @@ interface ImportRecord {
   id: string;
   importDate: string;
   totalAmount: string;
+  agency: string;
 }
 
 const ImportManagementPage: React.FC = () => {
   const [fromDate, setFromDate] = useState('');
   const [toDate, setToDate] = useState('');
   const [selectedAgency, setSelectedAgency] = useState('');
+  const [search, setSearch] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<ImportRecord | null>(null);
 
@@ -20,18 +22,29 @@ const ImportManagementPage: React.FC = () => {
       id: 'PN001',
       importDate: '2024-01-15',
       totalAmount: '15,000,000',
+      agency: 'Đại lý A',
     },
     {
       id: 'PN002',
       importDate: '2024-01-14',
       totalAmount: '22,500,000',
+      agency: 'Đại lý B',
     },
   ]);
 
+  const agencies = ['Tất cả đại lý', 'Đại lý A', 'Đại lý B', 'Đại lý C'];
+
+  // Lọc theo từ khóa và đại lý
   const filteredRecords = importRecords.filter(
     (record) =>
       (!fromDate || new Date(record.importDate) >= new Date(fromDate)) &&
-      (!toDate || new Date(record.importDate) <= new Date(toDate))
+      (!toDate || new Date(record.importDate) <= new Date(toDate)) &&
+      (selectedAgency === '' || selectedAgency === 'Tất cả đại lý' || record.agency === selectedAgency) &&
+      (
+        record.id.toLowerCase().includes(search.toLowerCase()) ||
+        record.totalAmount.toLowerCase().includes(search.toLowerCase()) ||
+        record.importDate.includes(search)
+      )
   );
 
   const handleDeleteClick = (record: ImportRecord) => {
@@ -65,15 +78,29 @@ const ImportManagementPage: React.FC = () => {
     setRecordToDelete(null);
   };
 
-  const agencies = ['Đại lý A', 'Đại lý B', 'Đại lý C'];
-
   return (
     <DashboardLayout>
       <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-blue-100">
         <h1 className="text-3xl font-extrabold text-blue-800 mb-8 drop-shadow uppercase tracking-wide">Quản lý Nhập hàng</h1>
         
         {/* Filters and Add Button */}
-        <div className="flex flex-wrap gap-4 mb-8 justify-between items-center">
+        <div className="flex flex-wrap gap-4 mb-8 items-center">
+          <input
+            type="text"
+            placeholder="Tìm kiếm phiếu nhập..."
+            className="flex-1 min-w-[220px] px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
+          <select
+            value={selectedAgency}
+            onChange={e => setSelectedAgency(e.target.value)}
+            className="px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm min-w-[180px]"
+          >
+            {agencies.map(agency => (
+              <option key={agency} value={agency}>{agency}</option>
+            ))}
+          </select>
           <input
             type="date"
             placeholder="Từ ngày"

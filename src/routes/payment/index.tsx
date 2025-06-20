@@ -4,57 +4,46 @@ import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
 interface PaymentRecord {
   id: string;
-  agencyCode: string;
-  agencyName: string;
-  amount: number;
+  agency: string;
+  address: string;
+  phone: string;
+  email: string;
   paymentDate: string;
-  creator: string;
-  createdDate: string;
-  updatedDate: string;
-  status: 'Hoàn thành' | 'Đang xử lý' | 'Hủy';
+  amount: number;
 }
 
 const PaymentPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<string>('all');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<PaymentRecord | null>(null);
 
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([
     {
       id: 'PT001',
-      agencyCode: 'DL001',
-      agencyName: 'Đại lý Hà Nội',
-      amount: 5000000,
+      agency: 'Đại lý Hà Nội',
+      address: '123 Nguyễn Văn Linh, Q.7, TP.HCM',
+      phone: '0901234567',
+      email: 'hanoi@example.com',
       paymentDate: '2024-01-15',
-      creator: 'Nguyễn Văn A',
-      createdDate: '2024-01-15',
-      updatedDate: '2024-01-15',
-      status: 'Hoàn thành'
+      amount: 5000000,
     },
     {
       id: 'PT002',
-      agencyCode: 'DL002',
-      agencyName: 'Đại lý Hồ Chí Minh',
-      amount: 3500000,
+      agency: 'Đại lý Hồ Chí Minh',
+      address: '456 Lê Lợi, Q.1, TP.HCM',
+      phone: '0902345678',
+      email: 'hcm@example.com',
       paymentDate: '2024-01-14',
-      creator: 'Trần Thị B',
-      createdDate: '2024-01-14',
-      updatedDate: '2024-01-14',
-      status: 'Đang xử lý'
-    }
+      amount: 3500000,
+    },
   ]);
 
-  const filteredRecords = paymentRecords.filter(record => {
-    const matchesSearch = 
-      record.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.agencyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.agencyCode.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = selectedStatus === 'all' || record.status === selectedStatus;
-
-    return matchesSearch && matchesStatus;
-  });
+  const filteredRecords = paymentRecords.filter(record =>
+    record.agency.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    record.phone.includes(searchTerm) ||
+    record.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleDeleteClick = (record: PaymentRecord) => {
     setRecordToDelete(record);
@@ -64,16 +53,10 @@ const PaymentPage: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (recordToDelete) {
       try {
-        // Simulate API call
         await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Remove from local state
         setPaymentRecords(paymentRecords.filter(r => r.id !== recordToDelete.id));
-        
-        // Close modal and reset
         setShowDeleteModal(false);
         setRecordToDelete(null);
-        
         alert(`Đã xóa phiếu thu ${recordToDelete.id} thành công!`);
       } catch (error) {
         console.error('Error deleting payment record:', error);
@@ -87,115 +70,72 @@ const PaymentPage: React.FC = () => {
     setRecordToDelete(null);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Hoàn thành': return 'bg-green-100 text-green-800';
-      case 'Đang xử lý': return 'bg-yellow-100 text-yellow-800';
-      case 'Hủy': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   return (
     <DashboardLayout>
       <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-blue-100">
         <h1 className="text-3xl font-extrabold text-blue-800 mb-8 drop-shadow uppercase tracking-wide">
           QUẢN LÝ THANH TOÁN
         </h1>
-        
-        {/* Search and Add Button */}
-        <div className="flex flex-wrap gap-4 mb-8 justify-between items-center">
+        <div className="flex items-center gap-4 mb-6">
           <input
             type="text"
             placeholder="Tìm kiếm phiếu thu..."
-            className="flex-1 min-w-[220px] px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
+            className="flex-1 px-5 py-3 border-2 border-blue-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 text-lg shadow-sm min-w-[220px] transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            className="px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
-          >
-            <option value="all">Tất cả trạng thái</option>
-            <option value="Hoàn thành">Hoàn thành</option>
-            <option value="Đang xử lý">Đang xử lý</option>
-            <option value="Hủy">Hủy</option>
-          </select>
           <Link
             to="/payment/add"
-            className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-md whitespace-nowrap"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span className="hidden sm:inline">Thêm phiếu thu</span>
-            <span className="sm:hidden">Thêm</span>
+            Thêm phiếu thu
           </Link>
         </div>
-
-        <h2 className="text-2xl font-extrabold text-blue-800 mb-6 drop-shadow">Danh sách phiếu thu</h2>
-        
-        {/* Payment Records Table */}
         <div className="overflow-x-auto rounded-2xl shadow-xl border-2 border-blue-100 bg-white">
           <table className="min-w-full bg-white border border-blue-200">
             <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
               <tr className="uppercase text-sm">
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px]">Mã Phiếu Thu</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[150px]">Đại Lý</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px]">Số Tiền</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden lg:table-cell">Ngày Thu</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden md:table-cell">Người Tạo</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden xl:table-cell">Ngày Tạo</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden xl:table-cell">Cập Nhật</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px]">Trạng Thái</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px]">Thao Tác</th>
+                <th className="py-3 px-4 text-left">Đại lý</th>
+                <th className="py-3 px-4 text-left">Địa chỉ</th>
+                <th className="py-3 px-4 text-left">Điện thoại</th>
+                <th className="py-3 px-4 text-left">Email</th>
+                <th className="py-3 px-4 text-left">Ngày thu tiền</th>
+                <th className="py-3 px-4 text-left">Số tiền thu</th>
+                <th className="py-3 px-4 text-center">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-blue-100">
               {filteredRecords.map((record) => (
                 <tr key={record.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{record.id}</td>
-                  <td className="px-4 py-3 text-gray-800">
-                    <div className="max-w-[150px] truncate" title={`${record.agencyCode} - ${record.agencyName}`}>
-                      {record.agencyCode} - {record.agencyName}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-800 font-semibold whitespace-nowrap">{record.amount.toLocaleString('vi-VN')} VND</td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden lg:table-cell">{new Date(record.paymentDate).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3 text-gray-800 hidden md:table-cell">
-                    <div className="max-w-[100px] truncate" title={record.creator}>
-                      {record.creator}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden xl:table-cell">{new Date(record.createdDate).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden xl:table-cell">{new Date(record.updatedDate).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-bold ${getStatusColor(record.status)}`}>
-                      <span className="hidden sm:inline">{record.status}</span>
-                      <span className="sm:hidden">{record.status === 'Hoàn thành' ? 'OK' : record.status === 'Đang xử lý' ? 'XL' : 'X'}</span>
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+                  <td className="px-4 py-3 font-semibold text-blue-700">{record.agency}</td>
+                  <td className="px-4 py-3 text-gray-800">{record.address}</td>
+                  <td className="px-4 py-3 text-gray-800">{record.phone}</td>
+                  <td className="px-4 py-3 text-gray-800">{record.email}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{record.paymentDate}</td>
+                  <td className="px-4 py-3 font-bold text-green-600">{record.amount.toLocaleString('vi-VN')} VND</td>
+                  <td className="px-4 py-3 text-center">
+                    <div className="flex justify-center gap-2">
                       <Link
                         to={`/payment/detail/${record.id}`}
-                        className="px-2 sm:px-3 py-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-center whitespace-nowrap"
+                        className="p-2 text-blue-600 hover:text-white bg-blue-50 hover:bg-blue-600 rounded-lg transition-colors"
+                        title="Xem chi tiết"
                       >
-                        Xem
-                      </Link>
-                      <Link
-                        to={`/payment/edit/${record.id}`}
-                        className="px-2 sm:px-3 py-1 text-xs font-bold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-center whitespace-nowrap"
-                      >
-                        <span className="hidden sm:inline">Chỉnh sửa</span>
-                        <span className="sm:hidden">Sửa</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
                       </Link>
                       <button
                         onClick={() => handleDeleteClick(record)}
-                        className="px-2 sm:px-3 py-1 text-xs font-bold text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 rounded-lg transition-colors whitespace-nowrap"
+                        className="p-2 text-red-600 hover:text-white bg-red-50 hover:bg-red-600 rounded-lg transition-colors"
+                        title="Xóa phiếu thu"
                       >
-                        Xóa
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
                       </button>
                     </div>
                   </td>
@@ -204,48 +144,45 @@ const PaymentPage: React.FC = () => {
             </tbody>
           </table>
         </div>
-
         {filteredRecords.length === 0 && (
           <div className="text-center py-8">
             <p className="text-gray-500 text-lg">Không tìm thấy phiếu thu nào.</p>
           </div>
         )}
-
-        {/* Delete Confirmation Modal */}
-        {showDeleteModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
-              <div className="text-center">
-                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">Xác nhận xóa phiếu thu</h3>
-                <p className="text-gray-600 mb-6">
-                  Bạn có chắc chắn muốn xóa phiếu thu <strong>{recordToDelete?.id}</strong>?
-                  <br />
-                  <span className="text-sm text-red-600">Hành động này không thể hoàn tác.</span>
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleDeleteCancel}
-                    className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
-                  >
-                    Hủy bỏ
-                  </button>
-                  <button
-                    onClick={handleDeleteConfirm}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
-                  >
-                    Xóa phiếu thu
-                  </button>
-                </div>
+      </div>
+      {showDeleteModal && recordToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="text-center">
+              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Xác nhận xóa phiếu thu</h3>
+              <p className="text-gray-600 mb-6">
+                Bạn có chắc chắn muốn xóa phiếu thu <strong>{recordToDelete.id}</strong>?
+                <br />
+                <span className="text-sm text-red-600">Hành động này không thể hoàn tác.</span>
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleDeleteCancel}
+                  className="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors font-semibold"
+                >
+                  Hủy bỏ
+                </button>
+                <button
+                  onClick={handleDeleteConfirm}
+                  className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-semibold"
+                >
+                  Xóa phiếu thu
+                </button>
               </div>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };

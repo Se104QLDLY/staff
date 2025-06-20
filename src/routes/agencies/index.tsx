@@ -59,7 +59,9 @@ const AgencyPage: React.FC = () => {
   const filteredAgencies = agencies.filter(agency => 
     agency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     agency.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agency.district.toLowerCase().includes(searchTerm.toLowerCase())
+    agency.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    agency.phone.includes(searchTerm) ||
+    agency.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -68,23 +70,22 @@ const AgencyPage: React.FC = () => {
         <h1 className="text-3xl font-extrabold text-blue-800 mb-8 drop-shadow uppercase tracking-wide">Quản lý đại lý</h1>
         
         {/* Search and Add Button */}
-        <div className="flex flex-wrap gap-4 mb-8 justify-between items-center">
+        <div className="flex items-center gap-4 mb-6">
           <input
             type="text"
             placeholder="Tìm kiếm đại lý..."
-            className="flex-1 min-w-[220px] px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
+            className="flex-1 px-5 py-3 border-2 border-blue-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 text-lg shadow-sm min-w-[220px] transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
           <Link
             to="/agencies/add"
-            className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
+            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-md whitespace-nowrap"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            <span className="hidden sm:inline">Thêm đại lý</span>
-            <span className="sm:hidden">Thêm</span>
+            Thêm đại lý
           </Link>
         </div>
 
@@ -95,61 +96,25 @@ const AgencyPage: React.FC = () => {
           <table className="min-w-full bg-white border border-blue-200">
             <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
               <tr className="uppercase text-sm">
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px]">Mã đại lý</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[150px]">Tên đại lý</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px]">Loại đại lý</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px] hidden lg:table-cell">Quận/Huyện</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[200px] hidden xl:table-cell">Địa chỉ</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[130px] hidden md:table-cell">Số điện thoại</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[150px] hidden lg:table-cell">Email</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden xl:table-cell">Ngày tạo</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[100px] hidden xl:table-cell">Cập nhật</th>
-                <th className="py-3 px-4 text-left whitespace-nowrap min-w-[120px]">Thao tác</th>
+                <th className="py-3 px-4 text-left">Mã đại lý</th>
+                <th className="py-3 px-4 text-left">Tên đại lý</th>
+                <th className="py-3 px-4 text-left">Địa chỉ</th>
+                <th className="py-3 px-4 text-left">Số điện thoại</th>
+                <th className="py-3 px-4 text-left">Email</th>
+                <th className="py-3 px-4 text-left">Thao tác</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-blue-100">
               {filteredAgencies.map((agency) => (
                 <tr key={agency.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{agency.code}</td>
-                  <td className="px-4 py-3 font-semibold text-gray-900">
-                    <div className="max-w-[200px] truncate" title={agency.name}>
-                      {agency.name}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    <span className={`px-3 py-1 rounded-full text-sm font-bold shadow-lg ${agency.type.name === 'Cấp 1' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'}`}>{agency.type.name}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden lg:table-cell">{agency.district}</td>
-                  <td className="px-4 py-3 text-gray-800 hidden xl:table-cell">
-                    <div className="max-w-[250px] truncate" title={agency.address}>
-                      {agency.address}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden md:table-cell">{agency.phone}</td>
-                  <td className="px-4 py-3 text-gray-800 hidden lg:table-cell">
-                    <div className="max-w-[180px] truncate" title={agency.email}>
-                      {agency.email}
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden xl:table-cell">{new Date(agency.createdDate).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3 text-gray-800 whitespace-nowrap hidden xl:table-cell">{new Date(agency.updatedDate).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
-                      <Link
-                        to={`/agencies/view/${agency.id}`}
-                        className="px-2 sm:px-3 py-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-center whitespace-nowrap"
-                      >
-                        <span className="hidden sm:inline">Xem chi tiết</span>
-                        <span className="sm:hidden">Xem</span>
-                      </Link>
-                      <Link
-                        to={`/agencies/edit/${agency.id}`}
-                        className="px-2 sm:px-3 py-1 text-xs font-bold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-center whitespace-nowrap"
-                      >
-                        <span className="hidden sm:inline">Chỉnh sửa</span>
-                        <span className="sm:hidden">Sửa</span>
-                      </Link>
-                    </div>
+                  <td className="px-4 py-3 font-semibold text-gray-900">{agency.code}</td>
+                  <td className="px-4 py-3 text-gray-800">{agency.name}</td>
+                  <td className="px-4 py-3 text-gray-800">{agency.address}</td>
+                  <td className="px-4 py-3 text-gray-800">{agency.phone}</td>
+                  <td className="px-4 py-3 text-gray-800">{agency.email}</td>
+                  <td className="px-4 py-3 space-x-2">
+                    <Link to={`/agencies/view/${agency.id}`} className="px-3 py-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Xem</Link>
+                    <Link to={`/agencies/edit/${agency.id}`} className="px-3 py-1 text-xs font-bold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">Sửa</Link>
                   </td>
                 </tr>
               ))}
