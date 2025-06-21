@@ -78,6 +78,17 @@ const ExportPage: React.FC = () => {
   // State lưu trạng thái kiểm tra tồn kho cho từng yêu cầu
   const [stockCheck, setStockCheck] = useState<Record<string, 'not_checked' | 'in_stock' | 'out_of_stock' | 'checking'>>({});
 
+  // State lưu chi tiết tồn kho cho từng yêu cầu
+  const [stockDetails, setStockDetails] = useState<Record<string, {
+    items: Array<{
+      name: string;
+      requested: number;
+      available: number;
+      status: 'sufficient' | 'insufficient';
+    }>;
+    overallStatus: 'sufficient' | 'insufficient';
+  }>>({});
+
   // Filter logic
   const filteredItems = exportItems.filter(item => {
     const matchesSearch = 
@@ -135,10 +146,24 @@ const ExportPage: React.FC = () => {
 
   // Khi xác nhận yêu cầu xuất hàng
   const handleConfirmRequest = (code: string) => {
-    const req = exportRequests.find(r => r.code === code);
-    if (req) {
-      setConfirmedRequests(list => [req, ...list]);
-      setExportRequests(requests => requests.filter(r => r.code !== code));
+    const stockDetail = stockDetails[code];
+    if (stockDetail && stockDetail.overallStatus === 'sufficient') {
+      const req = exportRequests.find(r => r.code === code);
+      if (req) {
+        setConfirmedRequests(list => [req, ...list]);
+        setExportRequests(requests => requests.filter(r => r.code !== code));
+        // Xóa thông tin kiểm tra tồn kho
+        setStockCheck(prev => {
+          const newState = { ...prev };
+          delete newState[code];
+          return newState;
+        });
+        setStockDetails(prev => {
+          const newState = { ...prev };
+          delete newState[code];
+          return newState;
+        });
+      }
     }
   };
 
@@ -164,8 +189,23 @@ const ExportPage: React.FC = () => {
   };
 
   // Khi từ chối yêu cầu xuất hàng
-  const handleRejectRequest = (code: string) => {
-    setExportRequests(requests => requests.filter(r => r.code !== code));
+  const handlePostponeRequest = (code: string) => {
+    const req = exportRequests.find(r => r.code === code);
+    if (req) {
+      // Có thể lưu vào danh sách tạm hoãn hoặc xóa khỏi danh sách yêu cầu
+      setExportRequests(requests => requests.filter(r => r.code !== code));
+      // Xóa thông tin kiểm tra tồn kho
+      setStockCheck(prev => {
+        const newState = { ...prev };
+        delete newState[code];
+        return newState;
+      });
+      setStockDetails(prev => {
+        const newState = { ...prev };
+        delete newState[code];
+        return newState;
+      });
+    }
   };
 
   // Hàm kiểm tra tồn kho (random, có loading)
@@ -174,13 +214,39 @@ const ExportPage: React.FC = () => {
       ...prev,
       [code]: 'checking',
     }));
+    
     setTimeout(() => {
-      const inStock = Math.random() > 0.5;
+      // Mock data cho chi tiết tồn kho - thực tế hơn
+      const mockItems = [
+        { name: 'Laptop Dell Inspiron 15', requested: 5, available: Math.floor(Math.random() * 10) + 1 },
+        { name: 'Chuột không dây Logitech', requested: 20, available: Math.floor(Math.random() * 30) + 5 },
+        { name: 'Bàn phím cơ Gaming', requested: 8, available: Math.floor(Math.random() * 15) + 2 },
+        { name: 'Màn hình 24 inch', requested: 3, available: Math.floor(Math.random() * 8) + 1 },
+        { name: 'USB 3.0 32GB', requested: 15, available: Math.floor(Math.random() * 25) + 3 },
+      ];
+      
+      // Cập nhật status cho từng item - logic chính xác hơn
+      const updatedItems = mockItems.map(item => ({
+        ...item,
+        status: item.requested <= item.available ? 'sufficient' as const : 'insufficient' as const
+      }));
+      
+      // Tính toán trạng thái tổng thể - chỉ đủ khi TẤT CẢ items đều đủ
+      const overallStatus = updatedItems.every(item => item.status === 'sufficient') ? 'sufficient' as const : 'insufficient' as const;
+      
+      setStockDetails(prev => ({
+        ...prev,
+        [code]: {
+          items: updatedItems,
+          overallStatus
+        }
+      }));
+      
       setStockCheck(prev => ({
         ...prev,
-        [code]: inStock ? 'in_stock' : 'out_of_stock',
+        [code]: overallStatus === 'sufficient' ? 'in_stock' : 'out_of_stock',
       }));
-    }, 1000);
+    }, 1500); // Tăng thời gian loading để thực tế hơn
   };
 
   return (
@@ -340,7 +406,7 @@ const ExportPage: React.FC = () => {
         {/* Modal xác nhận yêu cầu xuất hàng */}
         {showRequestModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 shadow-2xl">
+            <div className="bg-white rounded-2xl p-8 max-w-4xl w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="text-center mb-4">
                 <h2 className="text-2xl font-bold text-blue-800 mb-2">Yêu cầu xuất hàng từ đại lý</h2>
                 <p className="text-gray-600 mb-4">Danh sách các đại lý gửi yêu cầu xuất hàng, xác nhận để lập phiếu xuất.</p>
@@ -367,7 +433,7 @@ const ExportPage: React.FC = () => {
                         {(!stockCheck[req.code] || stockCheck[req.code] === 'not_checked') && (
                           <button
                             onClick={() => handleCheckStock(req.code)}
-                            className="px-3 py-1 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 font-semibold mr-2"
+                            className="px-3 py-1 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 font-semibold"
                           >
                             Kiểm tra tồn kho
                           </button>
@@ -378,23 +444,100 @@ const ExportPage: React.FC = () => {
                             <Loading size="sm" text="Đang kiểm tra..." />
                           </div>
                         )}
-                        {/* Nếu đã kiểm tra và còn hàng */}
-                        {stockCheck[req.code] === 'in_stock' && (
-                          <button
-                            onClick={() => handleConfirmRequest(req.code)}
-                            className="px-3 py-1 bg-green-500 text-white rounded-lg hover:bg-green-600 font-semibold mr-2"
-                          >
-                            Xác nhận
-                          </button>
-                        )}
-                        {/* Nếu đã kiểm tra và hết hàng */}
-                        {stockCheck[req.code] === 'out_of_stock' && (
-                          <button
-                            disabled
-                            className="px-3 py-1 bg-gray-400 text-white rounded-lg font-semibold mr-2 cursor-not-allowed"
-                          >
-                            Tạm hoãn
-                          </button>
+                        {/* Nếu đã kiểm tra - hiển thị chi tiết và 2 button */}
+                        {(stockCheck[req.code] === 'in_stock' || stockCheck[req.code] === 'out_of_stock') && (
+                          <div className="space-y-2">
+                            {/* Chi tiết tồn kho */}
+                            {stockDetails[req.code] && (
+                              <div className="bg-gray-50 rounded-lg p-3 mb-2">
+                                <h4 className="font-semibold text-sm mb-2 flex items-center gap-2">
+                                  <span>Chi tiết tồn kho:</span>
+                                  <span className={`text-xs px-2 py-1 rounded-full ${
+                                    stockDetails[req.code]?.overallStatus === 'sufficient' 
+                                      ? 'bg-green-100 text-green-700' 
+                                      : 'bg-red-100 text-red-700'
+                                  }`}>
+                                    {stockDetails[req.code]?.overallStatus === 'sufficient' ? 'ĐỦ TỒN KHO' : 'THIẾU TỒN KHO'}
+                                  </span>
+                                </h4>
+                                <div className="space-y-2">
+                                  {stockDetails[req.code]?.items.map((item, index) => (
+                                    <div key={index} className="flex justify-between items-center text-xs p-2 bg-white rounded border">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-medium truncate" title={item.name}>
+                                          {item.name}
+                                        </div>
+                                        <div className="text-gray-500 text-xs">
+                                          Yêu cầu: {item.requested} | Có sẵn: {item.available}
+                                        </div>
+                                      </div>
+                                      <div className="ml-2 flex items-center gap-1">
+                                        <span className={`font-bold ${
+                                          item.status === 'sufficient' ? 'text-green-600' : 'text-red-600'
+                                        }`}>
+                                          {item.requested}/{item.available}
+                                        </span>
+                                        <span className={`text-xs px-1.5 py-0.5 rounded ${
+                                          item.status === 'sufficient' 
+                                            ? 'bg-green-100 text-green-700' 
+                                            : 'bg-red-100 text-red-700'
+                                        }`}>
+                                          {item.status === 'sufficient' ? '✓' : '✗'}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <div className="mt-3 p-2 bg-white rounded border">
+                                  <div className="text-xs font-semibold text-gray-700 mb-1">Tóm tắt:</div>
+                                  <div className={`text-xs font-bold ${
+                                    stockDetails[req.code]?.overallStatus === 'sufficient' ? 'text-green-600' : 'text-red-600'
+                                  }`}>
+                                    {stockDetails[req.code]?.overallStatus === 'sufficient' 
+                                      ? '✓ Tất cả mặt hàng đều đủ tồn kho - Có thể xác nhận xuất hàng' 
+                                      : '✗ Một số mặt hàng thiếu tồn kho - Chỉ có thể tạm hoãn'
+                                    }
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                            {/* 2 button Xác nhận và Tạm hoãn */}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleConfirmRequest(req.code)}
+                                disabled={stockCheck[req.code] === 'out_of_stock'}
+                                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
+                                  stockCheck[req.code] === 'in_stock'
+                                    ? 'bg-green-500 text-white hover:bg-green-600 shadow-md hover:shadow-lg transform hover:scale-105'
+                                    : 'bg-gray-300 text-gray-500 cursor-not-allowed opacity-60'
+                                }`}
+                                title={
+                                  stockCheck[req.code] === 'in_stock' 
+                                    ? 'Xác nhận xuất hàng - Tất cả mặt hàng đều đủ tồn kho' 
+                                    : 'Không thể xác nhận - Một số mặt hàng thiếu tồn kho'
+                                }
+                              >
+                                <div className="flex items-center gap-1">
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                  Xác nhận
+                                </div>
+                              </button>
+                              <button
+                                onClick={() => handlePostponeRequest(req.code)}
+                                className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold text-sm shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                                title="Tạm hoãn yêu cầu xuất hàng"
+                              >
+                                <div className="flex items-center gap-1">
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                  </svg>
+                                  Tạm hoãn
+                                </div>
+                              </button>
+                            </div>
+                          </div>
                         )}
                       </td>
                     </tr>

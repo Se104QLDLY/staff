@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm, type SubmitHandler } from 'react-hook-form';
+import { useForm, type SubmitHandler, type FieldValues } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useNavigate } from 'react-router-dom';
@@ -17,18 +17,20 @@ interface SalesRow { agency: string; numExport: string; totalValue: string; rati
 interface DebtRow { agency: string; debtStart: string; incurred: string; debtEnd: string; }
 interface StockRow { agency: string; stockStart: string; import: string; export: string; stockEnd: string; }
 
-const schema = yup.object().shape({
-  type: yup.string().required('Vui lòng chọn loại báo cáo'),
-  period: yup.string().required('Vui lòng chọn kỳ báo cáo'),
+const schema: yup.ObjectSchema<ReportFormInputs> = yup.object().shape({
+  type: yup.mixed<'sales' | 'debt' | 'stock'>().oneOf(['sales', 'debt', 'stock']).required('Vui lòng chọn loại báo cáo'),
+  period: yup.mixed<'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'>().oneOf(['daily', 'weekly', 'monthly', 'quarterly', 'yearly']).required('Vui lòng chọn kỳ báo cáo'),
   startDate: yup.string().required('Vui lòng chọn ngày bắt đầu'),
   endDate: yup.string().required('Vui lòng chọn ngày kết thúc'),
   notes: yup.string().max(500, 'Ghi chú không được vượt quá 500 ký tự')
 });
 
+type ReportType = 'sales' | 'debt' | 'stock' | '';
+
 const AddReportPage: React.FC = () => {
   const navigate = useNavigate();
   const [isGenerating, setIsGenerating] = useState(false);
-  const [reportType, setReportType] = useState('');
+  const [reportType, setReportType] = useState<ReportType>('');
   const [salesRows, setSalesRows] = useState<SalesRow[]>([{ agency: '', numExport: '', totalValue: '', ratio: '' }]);
   const [debtRows, setDebtRows] = useState<DebtRow[]>([{ agency: '', debtStart: '', incurred: '', debtEnd: '' }]);
   const [stockRows, setStockRows] = useState<StockRow[]>([{ agency: '', stockStart: '', import: '', export: '', stockEnd: '' }]);
@@ -40,6 +42,7 @@ const AddReportPage: React.FC = () => {
 
   const onSubmit: SubmitHandler<ReportFormInputs> = async (data) => {
     setIsGenerating(true);
+    console.log(data);
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 2000));
     setIsGenerating(false);
@@ -84,7 +87,7 @@ const AddReportPage: React.FC = () => {
               <select
                 {...register('type')}
                 value={reportType}
-                onChange={e => { setReportType(e.target.value); setValue('type', e.target.value); }}
+                onChange={e => { setReportType(e.target.value as ReportType); setValue('type', e.target.value as 'sales' | 'debt' | 'stock'); }}
                 className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-lg bg-blue-50"
               >
                 <option value="">Chọn loại báo cáo</option>
@@ -155,7 +158,7 @@ const AddReportPage: React.FC = () => {
           {/* Hiển thị bảng nhập liệu theo loại báo cáo */}
           {reportType === 'sales' && (
             <div className="mt-8">
-              <div className="font-bold text-lg mb-2">BM6.1 - Báo Cáo Doanh Số</div>
+              <div className="font-bold text-lg mb-2">Báo Cáo Doanh Số</div>
               <table className="min-w-full border border-blue-200 rounded-xl overflow-hidden">
                 <thead className="bg-blue-200 text-blue-900">
                   <tr>
@@ -185,7 +188,7 @@ const AddReportPage: React.FC = () => {
           )}
           {reportType === 'debt' && (
             <div className="mt-8">
-              <div className="font-bold text-lg mb-2">BM6.2 - Báo Cáo Công Nợ Đại Lý</div>
+              <div className="font-bold text-lg mb-2">Báo Cáo Công Nợ Đại Lý</div>
               <table className="min-w-full border border-blue-200 rounded-xl overflow-hidden">
                 <thead className="bg-blue-200 text-blue-900">
                   <tr>
@@ -215,7 +218,7 @@ const AddReportPage: React.FC = () => {
           )}
           {reportType === 'stock' && (
             <div className="mt-8">
-              <div className="font-bold text-lg mb-2">BM6.3 - Báo Cáo Tồn Kho Đại Lý</div>
+              <div className="font-bold text-lg mb-2">Báo Cáo Tồn Kho Đại Lý</div>
               <table className="min-w-full border border-blue-200 rounded-xl overflow-hidden">
                 <thead className="bg-blue-200 text-blue-900">
                   <tr>

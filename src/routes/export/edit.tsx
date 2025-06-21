@@ -25,14 +25,14 @@ const productSchema = yup.object({
   unit: yup.string().required('Đơn vị là bắt buộc'),
   quantity: yup.number().required('Số lượng là bắt buộc').min(1, 'Số lượng phải lớn hơn 0'),
   unitPrice: yup.number().required('Đơn giá là bắt buộc').min(1000, 'Đơn giá phải ít nhất 1,000 VND'),
-});
+}).required();
 
 const schema = yup.object({
   agency: yup.string().required('Đại lý là bắt buộc'),
   exportDate: yup.string().required('Ngày xuất hàng là bắt buộc'),
   note: yup.string(),
-  products: yup.array().of(productSchema).min(1, 'Phải có ít nhất một sản phẩm'),
-  status: yup.string().required('Trạng thái là bắt buộc'),
+  products: yup.array().of(productSchema).min(1, 'Phải có ít nhất một sản phẩm').required(),
+  status: yup.mixed<'Hoàn thành' | 'Đang xử lý' | 'Hủy'>().oneOf(['Hoàn thành', 'Đang xử lý', 'Hủy']).required('Trạng thái là bắt buộc'),
 });
 
 const EditExportPage: React.FC = () => {
@@ -126,12 +126,12 @@ const EditExportPage: React.FC = () => {
             <h1 className="text-3xl font-extrabold text-blue-800 mb-2 drop-shadow uppercase tracking-wide">
               Chỉnh sửa phiếu xuất
             </h1>
-            <p className="text-gray-600">Cập nhật thông tin phiếu xuất {existingData.id}</p>
+            <p className="text-gray-500">Cập nhật thông tin phiếu xuất {existingData.id}</p>
           </div>
           <div className="flex gap-3">
             <Link
               to={`/export/detail/${id}`}
-              className="flex items-center px-4 py-2 text-purple-600 hover:text-purple-800 bg-purple-50 hover:bg-purple-100 rounded-xl transition-colors font-semibold"
+              className="flex items-center px-4 py-2 text-violet-600 hover:text-violet-800 bg-violet-100 hover:bg-violet-200 rounded-xl transition-colors font-semibold shadow-sm"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
@@ -141,7 +141,7 @@ const EditExportPage: React.FC = () => {
             </Link>
             <Link
               to="/export"
-              className="flex items-center px-4 py-2 text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors font-semibold"
+              className="flex items-center px-4 py-2 text-sky-600 hover:text-sky-800 bg-sky-100 hover:bg-sky-200 rounded-xl transition-colors font-semibold shadow-sm"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
@@ -153,16 +153,16 @@ const EditExportPage: React.FC = () => {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           {/* Basic Info */}
-          <div className="bg-gradient-to-r from-orange-50 to-red-50 rounded-2xl p-6 border-2 border-orange-100">
-            <h2 className="text-xl font-bold text-orange-800 mb-4">Thông tin cơ bản</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="bg-amber-50 rounded-2xl p-6 border border-amber-200">
+            <h2 className="text-xl font-bold text-amber-800 mb-6">Thông tin cơ bản</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div>
-                <label className="block text-orange-700 font-semibold mb-2">
+                <label className="block text-amber-900 font-semibold mb-2">
                   Đại lý <span className="text-red-500">*</span>
                 </label>
                 <select
                   {...register('agency')}
-                  className="w-full px-4 py-3 border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg shadow-sm"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-800 shadow-sm"
                 >
                   <option value="">Chọn đại lý</option>
                   {agencies.map((agency) => (
@@ -176,25 +176,30 @@ const EditExportPage: React.FC = () => {
                 )}
               </div>
               <div>
-                <label className="block text-orange-700 font-semibold mb-2">
+                <label className="block text-amber-900 font-semibold mb-2">
                   Ngày lập phiếu <span className="text-red-500">*</span>
                 </label>
-                <input
-                  type="date"
-                  {...register('exportDate')}
-                  className="w-full px-4 py-3 border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg shadow-sm"
-                />
+                <div className="relative">
+                  <input
+                    type="date"
+                    {...register('exportDate')}
+                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-800 shadow-sm"
+                  />
+                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                  </div>
+                </div>
                 {errors.exportDate && (
                   <span className="text-red-500 text-sm mt-1">{errors.exportDate.message}</span>
                 )}
               </div>
               <div>
-                <label className="block text-orange-700 font-semibold mb-2">
+                <label className="block text-amber-900 font-semibold mb-2">
                   Trạng thái <span className="text-red-500">*</span>
                 </label>
                 <select
                   {...register('status')}
-                  className="w-full px-4 py-3 border-2 border-orange-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-lg shadow-sm"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-gray-800 shadow-sm"
                 >
                   <option value="Hoàn thành">Hoàn thành</option>
                   <option value="Đang xử lý">Đang xử lý</option>
@@ -208,141 +213,130 @@ const EditExportPage: React.FC = () => {
           </div>
 
           {/* Products */}
-          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border-2 border-purple-100">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-purple-800">Danh sách sản phẩm</h2>
+          <div className="bg-violet-50 rounded-2xl p-6 border border-violet-200">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-violet-800">Danh sách sản phẩm</h2>
               <button
                 type="button"
                 onClick={() => append({ productName: '', unit: '', quantity: 1, unitPrice: 0 })}
-                className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-semibold"
+                className="flex items-center px-5 py-2.5 bg-violet-600 text-white rounded-xl hover:bg-violet-700 transition-colors font-bold shadow-md"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
                 </svg>
                 Thêm sản phẩm
               </button>
             </div>
-
-            <div className="space-y-4">
-              <thead className="bg-gradient-to-r from-orange-50 to-red-50 text-orange-700">
-                <tr className="uppercase text-sm">
-                  <th className="py-3 px-4 text-left">STT</th>
-                  <th className="py-3 px-4 text-left">Mặt hàng</th>
-                  <th className="py-3 px-4 text-left">Đơn vị tính</th>
-                  <th className="py-3 px-4 text-left">Số lượng</th>
-                  <th className="py-3 px-4 text-left">Đơn giá</th>
-                  <th className="py-3 px-4 text-left">Thành tiền</th>
-                  <th className="py-3 px-4 text-left">Thao tác</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-orange-100">
-                {fields.map((field, index) => (
-                  <tr key={field.id} className="hover:bg-orange-50">
-                    <td className="px-4 py-3 text-orange-700 text-center font-semibold">{index + 1}</td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="text"
-                        {...register(`products.${index}.productName` as const)}
-                        className="block w-full px-3 py-2 border border-orange-200 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-base"
-                      />
-                      {errors.products?.[index]?.productName && (
-                        <span className="text-red-500 text-xs mt-1">{errors.products[index]?.productName?.message}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="text"
-                        {...register(`products.${index}.unit` as const)}
-                        className="block w-full px-3 py-2 border border-orange-200 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-base"
-                      />
-                      {errors.products?.[index]?.unit && (
-                        <span className="text-red-500 text-xs mt-1">{errors.products[index]?.unit?.message}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        {...register(`products.${index}.quantity` as const)}
-                        className="block w-full px-3 py-2 border border-orange-200 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-base"
-                      />
-                      {errors.products?.[index]?.quantity && (
-                        <span className="text-red-500 text-xs mt-1">{errors.products[index]?.quantity?.message}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        {...register(`products.${index}.unitPrice` as const)}
-                        className="block w-full px-3 py-2 border border-orange-200 rounded-lg shadow-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-base"
-                      />
-                      {errors.products?.[index]?.unitPrice && (
-                        <span className="text-red-500 text-xs mt-1">{errors.products[index]?.unitPrice?.message}</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-orange-800 font-semibold text-right">
-                      {(watch(`products.${index}.quantity`) * watch(`products.${index}.unitPrice`)).toLocaleString('vi-VN')}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button
-                        type="button"
-                        onClick={() => remove(index)}
-                        className="px-3 py-1 text-xs font-bold text-red-600 hover:text-white bg-red-100 hover:bg-red-500 rounded-full transition-colors"
-                      >
-                        Xóa
-                      </button>
-                    </td>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="text-sm text-left text-violet-800 uppercase">
+                    <th className="py-3 px-4 font-semibold">STT</th>
+                    <th className="py-3 px-4 font-semibold">Mặt hàng</th>
+                    <th className="py-3 px-4 font-semibold">Đơn vị tính</th>
+                    <th className="py-3 px-4 font-semibold">Số lượng</th>
+                    <th className="py-3 px-4 font-semibold">Đơn giá</th>
+                    <th className="py-3 px-4 font-semibold">Thành tiền</th>
+                    <th className="py-3 px-4 font-semibold text-center">Thao tác</th>
                   </tr>
-                ))}
-              </tbody>
+                </thead>
+                <tbody>
+                  {fields.map((field, index) => {
+                    const quantity = watchedProducts?.[index]?.quantity || 0;
+                    const unitPrice = watchedProducts?.[index]?.unitPrice || 0;
+                    const total = quantity * unitPrice;
+
+                    return (
+                      <tr key={field.id} className="border-b border-violet-100 align-top">
+                        <td className="px-4 py-4 text-center text-violet-800 font-semibold">{index + 1}</td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            placeholder="Sản phẩm A"
+                            {...register(`products.${index}.productName` as const)}
+                            className="block w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-800 shadow-sm"
+                          />
+                           {errors.products?.[index]?.productName && (
+                            <span className="text-red-500 text-xs mt-1">{errors.products[index]?.productName?.message}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                           <input
+                              placeholder="Thùng"
+                              {...register(`products.${index}.unit` as const)}
+                              className="w-32 px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-800 shadow-sm"
+                            />
+                            {errors.products?.[index]?.unit && (
+                              <span className="text-red-500 text-xs mt-1">{errors.products[index]?.unit?.message}</span>
+                            )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            placeholder="80"
+                            {...register(`products.${index}.quantity` as const)}
+                            className="w-24 px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-800 shadow-sm"
+                          />
+                          {errors.products?.[index]?.quantity && (
+                            <span className="text-red-500 text-xs mt-1">{errors.products[index]?.quantity?.message}</span>
+                          )}
+                        </td>
+                         <td className="px-4 py-3">
+                          <input
+                            type="number"
+                            placeholder="150000"
+                            {...register(`products.${index}.unitPrice` as const)}
+                            className="w-32 px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-500 text-gray-800 shadow-sm"
+                          />
+                          {errors.products?.[index]?.unitPrice && (
+                            <span className="text-red-500 text-xs mt-1">{errors.products[index]?.unitPrice?.message}</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-gray-800 font-medium">
+                          {total.toLocaleString('vi-VN')}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => remove(index)}
+                            className="text-red-500 hover:text-red-700 font-semibold bg-red-100 hover:bg-red-200 px-3 py-1 rounded-lg transition-colors"
+                          >
+                            Xóa
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
 
-            {errors.products && typeof errors.products.message === 'string' && (
-              <span className="text-red-500 text-sm mt-2">{errors.products.message}</span>
-            )}
-
-            <div className="mt-6 p-4 bg-purple-100 rounded-lg">
-              <div className="flex justify-between items-center">
-                <span className="text-purple-800 font-bold text-lg">Tổng cộng:</span>
-                <span className="text-purple-600 font-bold text-xl">
-                  {calculateTotal().toLocaleString('vi-VN')} VND
-                </span>
-              </div>
+            <div className="mt-6 flex justify-end items-center gap-4 bg-violet-100 p-4 rounded-xl">
+              <span className="text-lg font-bold text-violet-900">Tổng cộng:</span>
+              <span className="text-2xl font-extrabold text-violet-900">
+                {calculateTotal().toLocaleString('vi-VN', { style: 'currency', currency: 'VND' })}
+              </span>
             </div>
           </div>
-
-          {/* Submit Buttons */}
-          <div className="flex gap-4 pt-6">
+          
+          <div className="flex justify-end gap-4 mt-8">
+            <button
+              type="button"
+              onClick={() => navigate('/export')}
+              className="px-8 py-3 bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 font-semibold transition-colors"
+            >
+              Hủy
+            </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className="flex-1 py-3 bg-gradient-to-r from-orange-600 to-red-500 text-white font-bold rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition-all text-lg border-2 border-transparent hover:border-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-8 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-blue-300 font-semibold transition-colors shadow-lg"
             >
-              {isSubmitting ? (
-                <div className="flex items-center justify-center">
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
-                  Đang cập nhật...
-                </div>
-              ) : (
-                'Cập nhật phiếu xuất'
-              )}
+              {isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
             </button>
-            <Link
-              to="/export"
-              className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl shadow-lg hover:bg-gray-200 transition-all text-lg text-center"
-            >
-              Hủy bỏ
-            </Link>
           </div>
         </form>
-
-        <div className="flex justify-end mt-8">
-          <div className="bg-orange-50 border border-orange-200 rounded-2xl shadow-lg px-8 py-6 min-w-[320px] w-full max-w-md">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600 font-medium">Tổng tiền</span>
-              <span className="text-2xl font-bold text-orange-700">{calculateTotal().toLocaleString('vi-VN')} đ</span>
-            </div>
-          </div>
-        </div>
       </div>
     </DashboardLayout>
   );
