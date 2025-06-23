@@ -1,19 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, ReactNode, MouseEventHandler } from 'react';
 // In a real app, you would use: import { useParams } from 'react-router-dom';
 // In a real app, you would use: import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Users, BadgeCheck, AlertCircle, Edit, ArrowLeft, Info, Phone, Mail, Building, MapPin, User, Calendar, Clock, DollarSign, List, Settings, Trash2, ShieldAlert } from 'lucide-react';
 
-// --- Mock Components for Preview ---
-// This would be your actual DashboardLayout in a real project.
-const DashboardLayout = ({ children }) => (
+type DashboardLayoutProps = { children: ReactNode };
+const DashboardLayout = ({ children }: DashboardLayoutProps) => (
     <div>
         {/* You could have a navbar or sidebar here */}
         <main>{children}</main>
     </div>
 );
 
-// This component replaces the need for react-router-dom's Link for preview purposes.
-const Link = ({ to, children, className }) => <a href={to} className={className}>{children}</a>;
+type LinkProps = { to: string; children: ReactNode; className?: string };
+const Link = ({ to, children, className }: LinkProps) => <a href={to} className={className}>{children}</a>;
 
 
 // --- Main Component ---
@@ -73,7 +72,13 @@ const getAgencyTypeChipStyle = (typeName: string) => {
 };
 
 // --- Reusable Components ---
-const InfoField = ({ label, value, icon, className = '' }) => (
+type InfoFieldProps = {
+  label: string;
+  value: ReactNode;
+  icon?: ReactNode;
+  className?: string;
+};
+const InfoField = ({ label, value, icon, className = '' }: InfoFieldProps) => (
     <div>
         <label className="flex items-center text-sm font-medium text-slate-500 mb-1">
             {icon}
@@ -85,7 +90,13 @@ const InfoField = ({ label, value, icon, className = '' }) => (
     </div>
 );
 
-const TabButton = ({ label, icon, isActive, onClick }) => (
+type TabButtonProps = {
+  label: string;
+  icon?: ReactNode;
+  isActive: boolean;
+  onClick: MouseEventHandler<HTMLButtonElement>;
+};
+const TabButton = ({ label, icon, isActive, onClick }: TabButtonProps) => (
     <button
         onClick={onClick}
         className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-md transition-colors duration-200 ${
