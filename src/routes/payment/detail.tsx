@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { HiUser, HiLocationMarker, HiPhone, HiMail, HiCalendar, HiCurrencyDollar } from 'react-icons/hi';
+import { DollarSign, User, MapPin, Phone, Mail, CalendarDays, BadgeDollarSign, ArrowLeft } from 'lucide-react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
 const mockData = [
@@ -39,50 +39,58 @@ const PaymentDetailPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="bg-gradient-to-br from-blue-50 via-cyan-50 to-white rounded-3xl shadow-2xl p-12 border-4 border-blue-200 max-w-xl mx-auto mt-12">
-        <h1 className="text-3xl font-extrabold mb-8 text-transparent bg-clip-text bg-gradient-to-r from-blue-700 via-cyan-500 to-blue-400 drop-shadow flex items-center gap-3 justify-center uppercase tracking-wide">
-          <HiCurrencyDollar className="text-blue-500 text-4xl" />
-          Chi tiết phiếu thu
-        </h1>
-        <div className="space-y-6 text-lg">
-          <div className="flex items-center gap-3">
-            <HiUser className="text-blue-400 text-2xl" />
-            <span className="font-bold text-blue-800 w-32 inline-block">Đại lý:</span>
-            <span>{payment.agency}</span>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-100 p-6 flex items-center justify-center">
+        <div className="max-w-3xl w-full mx-auto bg-white rounded-3xl shadow-2xl border-2 border-blue-200 p-10">
+          {/* Header */}
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg">
+              <DollarSign className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 drop-shadow uppercase tracking-wide">Chi tiết phiếu thu</h1>
+              <p className="text-gray-600 text-base mt-1">Thông tin chi tiết về phiếu thu tiền từ đại lý.</p>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <HiLocationMarker className="text-blue-400 text-2xl" />
-            <span className="font-bold text-blue-800 w-32 inline-block">Địa chỉ:</span>
-            <span>{payment.address}</span>
+          <div className="space-y-6 text-lg">
+            <div className="flex items-center gap-3">
+              <User className="text-blue-500 h-6 w-6" />
+              <span className="font-bold text-blue-800 w-32 inline-block">Đại lý:</span>
+              <span>{payment.agency}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <MapPin className="text-cyan-500 h-6 w-6" />
+              <span className="font-bold text-blue-800 w-32 inline-block">Địa chỉ:</span>
+              <span>{payment.address}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Phone className="text-green-500 h-6 w-6" />
+              <span className="font-bold text-blue-800 w-32 inline-block">Điện thoại:</span>
+              <span>{payment.phone}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <Mail className="text-purple-500 h-6 w-6" />
+              <span className="font-bold text-blue-800 w-32 inline-block">Email:</span>
+              <span>{payment.email}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <CalendarDays className="text-orange-500 h-6 w-6" />
+              <span className="font-bold text-blue-800 w-32 inline-block">Ngày thu tiền:</span>
+              <span>{payment.paymentDate}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <BadgeDollarSign className="text-green-600 h-6 w-6" />
+              <span className="font-bold text-blue-800 w-32 inline-block">Số tiền thu:</span>
+              <span className="font-bold text-green-600">{payment.amount.toLocaleString('vi-VN')} VND</span>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <HiPhone className="text-blue-400 text-2xl" />
-            <span className="font-bold text-blue-800 w-32 inline-block">Điện thoại:</span>
-            <span>{payment.phone}</span>
+          <div className="flex justify-end mt-10">
+            <button
+              onClick={() => navigate('/payment')}
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-200 to-blue-100 text-gray-700 rounded-2xl hover:bg-blue-200 transition-colors font-bold text-lg shadow"
+            >
+              <ArrowLeft className="h-5 w-5" /> Quay lại
+            </button>
           </div>
-          <div className="flex items-center gap-3">
-            <HiMail className="text-blue-400 text-2xl" />
-            <span className="font-bold text-blue-800 w-32 inline-block">Email:</span>
-            <span>{payment.email}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <HiCalendar className="text-blue-400 text-2xl" />
-            <span className="font-bold text-blue-800 w-32 inline-block">Ngày thu tiền:</span>
-            <span>{payment.paymentDate}</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <HiCurrencyDollar className="text-blue-400 text-2xl" />
-            <span className="font-bold text-blue-800 w-32 inline-block">Số tiền thu:</span>
-            <span className="font-bold text-green-600">{payment.amount.toLocaleString('vi-VN')} VND</span>
-          </div>
-        </div>
-        <div className="flex justify-end mt-10">
-          <button
-            onClick={() => navigate('/payment')}
-            className="px-6 py-3 bg-gray-200 text-gray-700 rounded-2xl hover:bg-gray-300 transition-colors font-bold text-lg shadow"
-          >
-            Quay lại
-          </button>
         </div>
       </div>
     </DashboardLayout>

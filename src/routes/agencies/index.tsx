@@ -1,132 +1,137 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
+import { Users, Search, Edit, Eye, BadgeCheck, Info } from 'lucide-react';
 
-interface Agency {
-  id: string;
-  code: string;
-  name: string;
-  type: {
-    id: number;
-    name: string;
-  };
-  district: string;
-  address: string;
-  phone: string;
-  email: string;
-  createdDate: string;
-  updatedDate: string;
-}
+const mockAgencies = [
+  { id: '1', name: 'Đại lý Minh Anh', code: 'DL001', address: '123 Nguyễn Văn Linh, Q.7, TP.HCM', phone: '0901234567', email: 'minhanh@example.com', approved: true },
+  { id: '2', name: 'Đại lý Thành Công', code: 'DL002', address: '456 Lê Lợi, Q.1, TP.HCM', phone: '0902345678', email: 'thanhcong@example.com', approved: true },
+  { id: '3', name: 'Đại lý Hồng Phúc', code: 'DL003', address: '789 Trần Hưng Đạo, Q.5, TP.HCM', phone: '0903456789', email: 'hongphuc@example.com', approved: false },
+];
 
 const AgencyPage: React.FC = () => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const navigate = useNavigate();
+  const [agencies] = useState(mockAgencies);
+  const [search, setSearch] = useState('');
 
-  // Mock data for agencies
-  const [agencies, setAgencies] = useState<Agency[]>([
-    {
-      id: '1',
-      code: 'DL001',
-      name: 'Đại lý Minh Anh',
-      type: {
-        id: 1,
-        name: 'Cấp 1'
-      },
-      district: 'Quận 1',
-      address: '123 Nguyễn Huệ',
-      phone: '0901234567',
-      email: 'minhanh@email.com',
-      createdDate: '2024-01-15',
-      updatedDate: '2024-01-20'
-    },
-    {
-      id: '2',
-      code: 'DL002',
-      name: 'Đại lý Thành Công',
-      type: {
-        id: 2,
-        name: 'Cấp 2'
-      },
-      district: 'Quận 3',
-      address: '456 Lê Lợi',
-      phone: '0907654321',
-      email: 'thanhcong@email.com',
-      createdDate: '2024-01-10',
-      updatedDate: '2024-01-18'
-    }
-  ]);
-
-  const filteredAgencies = agencies.filter(agency => 
-    agency.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agency.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agency.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agency.phone.includes(searchTerm) ||
-    agency.email.toLowerCase().includes(searchTerm.toLowerCase())
+  // Lọc danh sách theo từ khóa
+  const filteredAgencies = agencies.filter(a =>
+    a.name.toLowerCase().includes(search.toLowerCase()) ||
+    a.code.toLowerCase().includes(search.toLowerCase()) ||
+    a.address.toLowerCase().includes(search.toLowerCase()) ||
+    a.phone.includes(search) ||
+    a.email.toLowerCase().includes(search.toLowerCase())
   );
+
+  // Thống kê
+  const total = agencies.length;
+  const approved = agencies.filter(a => a.approved).length;
+  const notApproved = total - approved;
 
   return (
     <DashboardLayout>
-      <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-blue-100">
-        <h1 className="text-3xl font-extrabold text-blue-800 mb-8 drop-shadow uppercase tracking-wide">Quản lý đại lý</h1>
-        
-        {/* Search and Add Button */}
-        <div className="flex items-center gap-4 mb-6">
-          <input
-            type="text"
-            placeholder="Tìm kiếm đại lý..."
-            className="flex-1 px-5 py-3 border-2 border-blue-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-400 focus:border-blue-500 text-lg shadow-sm min-w-[220px] transition-all"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <Link
-            to="/agencies/add"
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-2xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-md whitespace-nowrap"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            Thêm đại lý
-          </Link>
-        </div>
-
-        <h2 className="text-2xl font-extrabold text-blue-800 mb-6 drop-shadow">Danh sách đại lý</h2>
-        
-        {/* Agencies Table */}
-        <div className="overflow-x-auto rounded-2xl shadow-xl border-2 border-blue-100 bg-white">
-          <table className="min-w-full bg-white border border-blue-200">
-            <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
-              <tr className="uppercase text-sm">
-                <th className="py-3 px-4 text-left">Mã đại lý</th>
-                <th className="py-3 px-4 text-left">Tên đại lý</th>
-                <th className="py-3 px-4 text-left">Địa chỉ</th>
-                <th className="py-3 px-4 text-left">Số điện thoại</th>
-                <th className="py-3 px-4 text-left">Email</th>
-                <th className="py-3 px-4 text-left">Thao tác</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-blue-100">
-              {filteredAgencies.map((agency) => (
-                <tr key={agency.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-semibold text-gray-900">{agency.code}</td>
-                  <td className="px-4 py-3 text-gray-800">{agency.name}</td>
-                  <td className="px-4 py-3 text-gray-800">{agency.address}</td>
-                  <td className="px-4 py-3 text-gray-800">{agency.phone}</td>
-                  <td className="px-4 py-3 text-gray-800">{agency.email}</td>
-                  <td className="px-4 py-3 space-x-2">
-                    <Link to={`/agencies/view/${agency.id}`} className="px-3 py-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">Xem</Link>
-                    <Link to={`/agencies/edit/${agency.id}`} className="px-3 py-1 text-xs font-bold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 rounded-lg transition-colors">Sửa</Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredAgencies.length === 0 && (
-          <div className="text-center py-8">
-            <p className="text-gray-500 text-lg">Không tìm thấy đại lý nào.</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
+        <div className="max-w-6xl mx-auto">
+          {/* Header */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 flex items-center justify-center shadow-lg">
+                <Users className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl font-extrabold text-gray-900 drop-shadow uppercase tracking-wide">Quản lý đại lý</h1>
+                <p className="text-gray-600 text-base mt-1">Theo dõi và quản lý thông tin các đại lý trong hệ thống.</p>
+              </div>
+            </div>
+            <Link
+              to="/agencies/add"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition-all text-lg border-2 border-blue-700"
+            >
+              <Users className="h-5 w-5" /> Thêm đại lý
+            </Link>
           </div>
-        )}
+
+          {/* Thống kê */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+            <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl shadow-lg p-6 border-2 border-blue-100 flex flex-col items-center">
+              <Users className="h-8 w-8 text-blue-600 mb-2" />
+              <div className="text-gray-700 font-semibold mb-1">Tổng số đại lý</div>
+              <div className="text-2xl font-extrabold text-blue-700">{total}</div>
+            </div>
+            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-lg p-6 border-2 border-green-100 flex flex-col items-center">
+              <BadgeCheck className="h-8 w-8 text-green-600 mb-2" />
+              <div className="text-gray-700 font-semibold mb-1">Đã duyệt</div>
+              <div className="text-2xl font-extrabold text-green-700">{approved}</div>
+            </div>
+            <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl shadow-lg p-6 border-2 border-red-100 flex flex-col items-center">
+              <Info className="h-8 w-8 text-red-600 mb-2" />
+              <div className="text-gray-700 font-semibold mb-1">Chưa duyệt</div>
+              <div className="text-2xl font-extrabold text-red-600">{notApproved}</div>
+            </div>
+          </div>
+
+          {/* Tìm kiếm */}
+          <div className="bg-white rounded-2xl shadow-lg p-4 border-2 border-blue-100 flex flex-col sm:flex-row items-center gap-4 mb-6">
+            <div className="flex items-center w-full sm:w-1/2 bg-blue-50 rounded-xl px-4 py-2 border border-blue-100">
+              <Search className="h-5 w-5 text-blue-400 mr-2" />
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Tìm kiếm đại lý..."
+                className="flex-1 bg-transparent outline-none text-lg text-blue-900"
+              />
+            </div>
+          </div>
+
+          {/* Bảng đại lý */}
+          <div className="overflow-x-auto rounded-2xl shadow-xl border-2 border-blue-100 bg-white">
+            <table className="min-w-full bg-white border border-blue-200">
+              <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
+                <tr className="uppercase text-sm">
+                  <th className="py-3 px-4 text-left">#</th>
+                  <th className="py-3 px-4 text-left">Mã đại lý</th>
+                  <th className="py-3 px-4 text-left">Tên đại lý</th>
+                  <th className="py-3 px-4 text-left">Địa chỉ</th>
+                  <th className="py-3 px-4 text-left">Số điện thoại</th>
+                  <th className="py-3 px-4 text-left">Email</th>
+                  <th className="py-3 px-4 text-left">Trạng thái</th>
+                  <th className="py-3 px-4 text-left">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-blue-100">
+                {filteredAgencies.map((agency, idx) => (
+                  <tr key={agency.id} className="hover:bg-blue-50 transition-colors">
+                    <td className="px-4 py-3">
+                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-200 to-blue-400 flex items-center justify-center text-white font-bold text-lg shadow">
+                        <Users className="h-5 w-5" />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-blue-900">{agency.code}</td>
+                    <td className="px-4 py-3 text-gray-800">{agency.name}</td>
+                    <td className="px-4 py-3 text-gray-800">{agency.address}</td>
+                    <td className="px-4 py-3 text-gray-800">{agency.phone}</td>
+                    <td className="px-4 py-3 text-gray-800">{agency.email}</td>
+                    <td className="px-4 py-3">
+                      {agency.approved ? (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full"><BadgeCheck className="h-4 w-4"/>Đã duyệt</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded-full"><Info className="h-4 w-4"/>Chưa duyệt</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 flex gap-2">
+                      <Link to={`/agencies/view/${agency.id}`} className="p-2 rounded-full bg-blue-50 hover:bg-blue-200 text-blue-600 hover:text-blue-900 transition-colors" title="Xem">
+                        <Eye className="h-5 w-5" />
+                      </Link>
+                      <Link to={`/agencies/edit/${agency.id}`} className="p-2 rounded-full bg-green-50 hover:bg-green-200 text-green-600 hover:text-green-900 transition-colors" title="Sửa">
+                        <Edit className="h-5 w-5" />
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </DashboardLayout>
   );

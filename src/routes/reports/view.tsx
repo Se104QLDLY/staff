@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout/DashboardLayout';
+import { FileText, User, Calendar, BadgeCheck, Layers, ArrowLeft, DollarSign, Info, ClipboardList, CheckCircle, AlertCircle } from 'lucide-react';
 
 const ViewReportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -8,7 +9,7 @@ const ViewReportPage: React.FC = () => {
   // Mock data - in a real app, this would be fetched from API based on ID
   const reportData = {
     id: id || 'BC001',
-    type: 'Doanh số',
+    type: 'Doanh thu',
     reportDate: '15/01/2024',
     period: 'Hàng tháng',
     amount: 1250000000,
@@ -49,21 +50,13 @@ const ViewReportPage: React.FC = () => {
   const getTypeBadge = (type: string) => {
     switch (type) {
       case 'Doanh thu':
-        return (
-          <span className="inline-block px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-lg">Doanh thu</span>
-        );
+        return <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-lg"><DollarSign className="h-4 w-4"/>Doanh thu</span>;
       case 'Công nợ':
-        return (
-          <span className="inline-block px-3 py-1 bg-red-100 text-red-800 text-sm font-semibold rounded-lg">Công nợ</span>
-        );
+        return <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 text-sm font-semibold rounded-lg"><AlertCircle className="h-4 w-4"/>Công nợ</span>;
       case 'Tồn kho':
-        return (
-          <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-lg">Tồn kho</span>
-        );
+        return <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-lg"><Layers className="h-4 w-4"/>Tồn kho</span>;
       case 'Hoạt động':
-        return (
-          <span className="inline-block px-3 py-1 bg-purple-100 text-purple-800 text-sm font-semibold rounded-lg">Hoạt động</span>
-        );
+        return <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 text-sm font-semibold rounded-lg"><ClipboardList className="h-4 w-4"/>Hoạt động</span>;
       default:
         return null;
     }
@@ -71,101 +64,102 @@ const ViewReportPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-gray-100 p-6">
-        {/* Header */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-wide">
-              CHI TIẾT BÁO CÁO - {reportData.id}
-            </h1>
-            <Link
-              to="/reports"
-              className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clipRule="evenodd" />
-              </svg>
-              Quay lại danh sách
-            </Link>
-          </div>
-        </div>
-
-        {/* Report Info */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Thông tin cơ bản</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Mã báo cáo</label>
-              <p className="text-gray-900 font-semibold">{reportData.id}</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="bg-white rounded-3xl shadow-2xl p-8 border-2 border-blue-100 mb-8 flex flex-col gap-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <FileText className="h-10 w-10 text-blue-600" />
+                <h1 className="text-3xl font-extrabold text-gray-900 drop-shadow uppercase tracking-wide">Chi tiết báo cáo</h1>
+              </div>
+              <Link
+                to="/reports"
+                className="flex items-center px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-500 text-white rounded-xl hover:from-blue-600 hover:to-indigo-600 transition-all font-semibold shadow-md"
+              >
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Quay lại
+              </Link>
             </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Loại báo cáo</label>
-              <div>{getTypeBadge(reportData.type)}</div>
-            </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Ngày báo cáo</label>
-              <p className="text-gray-900 font-semibold">{reportData.reportDate}</p>
-            </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Kỳ báo cáo</label>
-              <p className="text-gray-900 font-semibold">{reportData.period}</p>
-            </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Số tiền</label>
-              <p className="text-gray-900 font-semibold text-lg">{formatCurrency(reportData.amount)}</p>
-            </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Trạng thái</label>
-              <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-lg">
+            <div className="flex flex-wrap gap-3 items-center">
+              <span className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-700 text-sm font-semibold rounded-full border border-blue-200">
+                <BadgeCheck className="h-4 w-4" />
+                Mã: {reportData.id}
+              </span>
+              {getTypeBadge(reportData.type)}
+              <span className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 text-sm font-semibold rounded-full border border-emerald-200">
+                <CheckCircle className="h-4 w-4" />
                 {reportData.status}
               </span>
             </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Người tạo</label>
-              <p className="text-gray-900 font-semibold">{reportData.creator}</p>
+          </div>
+
+          {/* Thông tin cơ bản */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-blue-100 mb-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <User className="h-5 w-5 text-blue-500" />
+                <span className="font-semibold text-gray-700">Người tạo:</span>
+                <span className="text-gray-900 font-bold">{reportData.creator}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="h-5 w-5 text-blue-500" />
+                <span className="font-semibold text-gray-700">Ngày tạo:</span>
+                <span className="text-gray-900 font-bold">{reportData.createdDate}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Calendar className="h-5 w-5 text-blue-500" />
+                <span className="font-semibold text-gray-700">Ngày báo cáo:</span>
+                <span className="text-gray-900 font-bold">{reportData.reportDate}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Info className="h-5 w-5 text-blue-500" />
+                <span className="font-semibold text-gray-700">Kỳ báo cáo:</span>
+                <span className="text-gray-900 font-bold">{reportData.period}</span>
+              </div>
             </div>
-            
-            <div>
-              <label className="block text-gray-600 font-medium mb-1">Ngày tạo</label>
-              <p className="text-gray-900 font-semibold">{reportData.createdDate}</p>
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center gap-3">
+                <DollarSign className="h-5 w-5 text-green-500" />
+                <span className="font-semibold text-gray-700">Số tiền:</span>
+                <span className="text-2xl font-extrabold text-green-700">{formatCurrency(reportData.amount)}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CheckCircle className="h-5 w-5 text-emerald-500" />
+                <span className="font-semibold text-gray-700">Trạng thái:</span>
+                <span className="text-emerald-700 font-bold">{reportData.status}</span>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Report Description */}
-        <div className="bg-white rounded-lg shadow-lg p-8 mb-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Mô tả báo cáo</h2>
-          <p className="text-gray-700 text-lg">{reportData.description}</p>
-        </div>
-
-        {/* Report Details */}
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-4">Chi tiết báo cáo</h2>
-          <div className="bg-gray-50 rounded-lg p-6">
-            <pre className="text-gray-700 whitespace-pre-wrap font-mono text-sm leading-relaxed">
-              {reportData.details}
-            </pre>
+          {/* Mô tả báo cáo */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-blue-100 mb-8">
+            <h2 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2"><Info className="h-5 w-5 text-blue-500"/>Mô tả báo cáo</h2>
+            <p className="text-gray-700 text-lg leading-relaxed">{reportData.description}</p>
           </div>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex gap-4 mt-6">
-          <button className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-            Xuất PDF
-          </button>
-          <button className="px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors">
-            Xuất Excel
-          </button>
-          <button className="px-6 py-3 bg-orange-600 text-white font-semibold rounded-lg hover:bg-orange-700 transition-colors">
-            In báo cáo
-          </button>
+          {/* Chi tiết báo cáo */}
+          <div className="bg-white rounded-2xl shadow-lg p-8 border border-blue-100 mb-8">
+            <h2 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2"><ClipboardList className="h-5 w-5 text-blue-500"/>Chi tiết báo cáo</h2>
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-6 overflow-x-auto">
+              <pre className="text-gray-700 whitespace-pre-wrap font-mono text-base leading-relaxed">
+                {reportData.details}
+              </pre>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-4 mt-6 justify-end">
+            <button className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-md flex items-center gap-2">
+              <FileText className="h-5 w-5" /> Xuất PDF
+            </button>
+            <button className="px-6 py-3 bg-green-600 text-white font-semibold rounded-xl hover:bg-green-700 transition-colors shadow-md flex items-center gap-2">
+              <Layers className="h-5 w-5" /> Xuất Excel
+            </button>
+            <button className="px-6 py-3 bg-orange-600 text-white font-semibold rounded-xl hover:bg-orange-700 transition-colors shadow-md flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" /> In báo cáo
+            </button>
+          </div>
         </div>
       </div>
     </DashboardLayout>
