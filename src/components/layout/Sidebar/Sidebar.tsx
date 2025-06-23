@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 
 interface SidebarProps {
   className?: string;
+  onOpenPanel?: (panel: string | null) => void;
 }
 
 interface SidebarItem {
@@ -19,7 +20,7 @@ const sidebarStyle = {
   overflowX: 'hidden' as const
 };
 
-export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ className = '', onOpenPanel }) => {
   const location = useLocation();
   
   // State để kiểm soát sidebar collapse
@@ -169,9 +170,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ className = '' }) => {
                   title={collapsed ? item.label : ''}
                   onClick={() => isMobile && setCollapsed(true)}
                 >
-                  <div className={`${isActive ? 'text-blue-700' : 'text-gray-400'} flex-shrink-0`}>
-                    {item.icon}
-                  </div>
+                  <div className={`${isActive ? 'text-blue-700' : 'text-gray-400'} flex-shrink-0`}>{item.icon}</div>
                   {!collapsed && (
                     <span className="whitespace-nowrap overflow-hidden">{item.label}</span>
                   )}

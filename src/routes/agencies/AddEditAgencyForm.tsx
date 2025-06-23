@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { apiClient } from '../../api/axiosClient';
+import { useToast } from '../../components/common';
 
 const AddEditAgencyForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [formData, setFormData] = useState({
@@ -12,16 +14,26 @@ const AddEditAgencyForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     createdDate: '',
     updatedDate: '',
   });
+  const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    onClose();
+    setLoading(true);
+    try {
+      await apiClient.createAgency(formData);
+      toast.show('Thêm đại lý thành công!', 'success');
+      onClose();
+    } catch (err: any) {
+      toast.show('Có lỗi xảy ra khi thêm đại lý!', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -130,14 +142,20 @@ const AddEditAgencyForm: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             type="button"
             onClick={onClose}
             className="px-6 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+            disabled={loading}
           >
             Hủy bỏ
           </button>
           <button
             type="submit"
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+            disabled={loading}
           >
-            Lưu
+            {loading ? (
+              <span className="flex items-center"><span className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></span>Đang lưu...</span>
+            ) : (
+              'Lưu'
+            )}
           </button>
         </div>
       </form>

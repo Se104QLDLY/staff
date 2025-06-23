@@ -1,13 +1,16 @@
 import { BrowserRouter as Router } from 'react-router-dom';
 import AppRoutes from './routes';
 import ErrorBoundary from './components/ErrorBoundary';
+import { ToastProvider } from './components/common';
 
 function App() {
   return (
     <ErrorBoundary>
-      <Router>
-        <AppRoutes />
-      </Router>
+      <ToastProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </ToastProvider>
     </ErrorBoundary>
   );
 }
