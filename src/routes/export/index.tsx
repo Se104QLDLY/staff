@@ -297,7 +297,7 @@ const ExportPage: React.FC = () => {
                 onClick={() => setShowRequestModal(true)}
                 className="px-4 py-3 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-colors font-bold text-lg shadow-lg whitespace-nowrap flex items-center gap-2"
               >
-                <BadgeAlert className="h-5 w-5" /> Xác nhận các đại lý
+                <BadgeAlert className="h-5 w-5" /> Xác nhận yêu cầu phân phối
               </button>
               <Link
                 to="/export/add"

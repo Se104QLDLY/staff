@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Receipt, Trash2, Eye, AlertCircle, CheckCircle, Users, Mail, Phone, MapPin, CalendarDays, DollarSign, Search, MoreVertical, ListChecks, LayoutGrid, List, XCircle, Clock, PlusCircle } from 'lucide-react';
+import { Receipt, Trash2, Eye, AlertCircle, CheckCircle, Users, Mail, Phone, MapPin, CalendarDays, DollarSign, Search, MoreVertical, ListChecks, LayoutGrid, List, XCircle, Clock, PlusCircle, Pencil, User, BadgeDollarSign, ArrowLeft } from 'lucide-react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
 interface PaymentRecord {
@@ -229,12 +229,171 @@ const DeleteModal: React.FC<{
   );
 };
 
+const EditModal: React.FC<{
+  record: PaymentRecord | null;
+  onClose: () => void;
+  onSave: (updated: PaymentRecord) => void;
+  loading?: boolean;
+}> = ({ record, onClose, onSave, loading }) => {
+  const [form, setForm] = useState({
+    agency: record?.agency || '',
+    address: record?.address || '',
+    phone: record?.phone || '',
+    email: record?.email || '',
+    paymentDate: record?.paymentDate || '',
+    amount: record?.amount || 0,
+    status: record?.status || 'Chưa thanh toán',
+  });
+  if (!record) return null;
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm(f => ({ ...f, [name]: name === 'amount' ? Number(value) : value }));
+  };
+  return (
+    <div className="fixed inset-0 bg-gradient-to-br from-green-100 via-blue-50 to-purple-100 bg-opacity-95 flex items-center justify-center z-50 p-2">
+      <div className="w-full max-w-3xl mx-auto rounded-xl shadow-xl border border-gray-100 bg-white/90 backdrop-blur-lg p-0 overflow-hidden max-h-[70vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center gap-2 bg-gradient-to-r from-green-200 via-blue-100 to-purple-200 p-3 relative">
+          <div className="flex-shrink-0 flex items-center justify-center w-10 h-10 rounded-full bg-white shadow border border-gray-100">
+            <Pencil className="h-5 w-5 text-blue-400" />
+          </div>
+          <h2 className="text-lg font-extrabold text-gray-700 drop-shadow uppercase tracking-wide flex-1 text-center">Sửa phiếu thu</h2>
+          <button onClick={onClose} className="absolute top-2 right-2 w-7 h-7 flex items-center justify-center rounded-full bg-white/80 hover:bg-red-400 transition-colors shadow" title="Đóng"><XCircle className="w-5 h-5 text-blue-400 hover:text-white" /></button>
+        </div>
+        {/* Form card */}
+        <form className="p-3 md:p-5 flex-1 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5 bg-transparent" style={{minHeight:'0'}} onSubmit={e => { e.preventDefault(); onSave({ ...record, ...form }); }}>
+          <div className="space-y-3 flex flex-col justify-between">
+            <div className="rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
+              <label className="block text-sm font-bold text-blue-700 mb-1 flex items-center gap-1">
+                <User className="text-blue-400 h-4 w-4" /> Đại lý
+              </label>
+              <input
+                type="text"
+                name="agency"
+                value={form.agency}
+                onChange={handleChange}
+                className="w-full px-2 py-1 border border-gray-100 rounded focus:outline-none focus:ring-1 focus:ring-blue-200 focus:border-blue-300 text-sm bg-white"
+                placeholder="Nhập tên đại lý..."
+                required
+              />
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
+              <label className="block text-sm font-bold text-cyan-700 mb-1 flex items-center gap-1">
+                <MapPin className="text-cyan-400 h-4 w-4" /> Địa chỉ
+              </label>
+              <input
+                type="text"
+                name="address"
+                value={form.address}
+                onChange={handleChange}
+                className="w-full px-2 py-1 border border-gray-100 rounded focus:outline-none focus:ring-1 focus:ring-cyan-200 focus:border-cyan-300 text-sm bg-white"
+                placeholder="Nhập địa chỉ đại lý..."
+                required
+              />
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
+              <label className="block text-sm font-bold text-fuchsia-700 mb-1 flex items-center gap-1">
+                <Phone className="text-fuchsia-400 h-4 w-4" /> Điện thoại
+              </label>
+              <input
+                type="text"
+                name="phone"
+                value={form.phone}
+                onChange={handleChange}
+                className="w-full px-2 py-1 border border-gray-100 rounded focus:outline-none focus:ring-1 focus:ring-fuchsia-200 focus:border-fuchsia-300 text-sm bg-white"
+                placeholder="Nhập số điện thoại..."
+                required
+              />
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
+              <label className="block text-sm font-bold text-purple-700 mb-1 flex items-center gap-1">
+                <Mail className="text-purple-400 h-4 w-4" /> Email
+              </label>
+              <input
+                type="email"
+                name="email"
+                value={form.email}
+                onChange={handleChange}
+                className="w-full px-2 py-1 border border-gray-100 rounded focus:outline-none focus:ring-1 focus:ring-purple-200 focus:border-purple-300 text-sm bg-white"
+                placeholder="Nhập email đại lý..."
+                required
+              />
+            </div>
+          </div>
+          <div className="space-y-3 flex flex-col justify-between">
+            <div className="rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
+              <label className="block text-sm font-bold text-orange-700 mb-1 flex items-center gap-1">
+                <CalendarDays className="text-orange-400 h-4 w-4" /> Ngày thu tiền
+              </label>
+              <input
+                type="date"
+                name="paymentDate"
+                value={form.paymentDate}
+                onChange={handleChange}
+                className="w-full px-2 py-1 border border-gray-100 rounded focus:outline-none focus:ring-1 focus:ring-orange-200 focus:border-orange-300 text-sm bg-white"
+                required
+              />
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
+              <label className="block text-sm font-bold text-green-700 mb-1 flex items-center gap-1">
+                <BadgeDollarSign className="text-green-400 h-4 w-4" /> Số tiền thu
+              </label>
+              <input
+                type="number"
+                name="amount"
+                value={form.amount}
+                onChange={handleChange}
+                className="w-full px-2 py-1 border border-gray-100 rounded focus:outline-none focus:ring-1 focus:ring-green-200 focus:border-green-300 text-sm bg-white"
+                placeholder="Nhập số tiền thu..."
+                required
+              />
+            </div>
+            <div className="rounded-lg border border-gray-200 bg-white p-2 shadow-sm">
+              <label className="block text-sm font-bold text-fuchsia-700 mb-1 flex items-center gap-1">
+                <CheckCircle className="text-fuchsia-400 h-4 w-4" /> Trạng thái
+              </label>
+              <select
+                name="status"
+                value={form.status}
+                onChange={handleChange}
+                className="w-full px-2 py-1 border border-gray-100 rounded focus:outline-none focus:ring-1 focus:ring-fuchsia-200 focus:border-fuchsia-300 text-sm bg-white"
+                required
+              >
+                <option value="Đã thanh toán">Đã thanh toán</option>
+                <option value="Chưa thanh toán">Chưa thanh toán</option>
+              </select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex items-center gap-1 px-4 py-1 bg-gradient-to-r from-gray-100 to-blue-100 text-gray-700 rounded-full hover:bg-blue-200 transition-colors font-bold text-sm shadow border border-gray-200"
+              >
+                <ArrowLeft className="h-4 w-4" /> Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex items-center gap-1 px-4 py-1 bg-gradient-to-r from-blue-400 to-green-300 text-white rounded-full hover:from-blue-500 hover:to-green-400 transition-all font-bold text-sm shadow border border-blue-100 disabled:opacity-60"
+              >
+                {loading ? <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path></svg> : <Pencil className="h-4 w-4" />}Lưu
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 const PaymentPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<PaymentRecord | null>(null);
   const [recordToView, setRecordToView] = useState<PaymentRecord | null>(null);
+  const [recordToEdit, setRecordToEdit] = useState<PaymentRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const itemsPerPage = 8;
@@ -289,6 +448,16 @@ const PaymentPage: React.FC = () => {
     setToast({ type: 'success', message: `Đã thanh toán phiếu thu ${id} thành công!` });
     setLoadingPay(false);
   };
+
+  const handleEditClick = (record: PaymentRecord) => { setRecordToEdit(record); setShowEditModal(true); };
+  const handleEditSave = async (updated: PaymentRecord) => {
+    setPaymentRecords(records => records.map(r => r.id === updated.id ? updated : r));
+    setShowEditModal(false);
+    setRecordToEdit(null);
+    setToast({ type: 'success', message: `Đã cập nhật phiếu thu ${updated.id} thành công!` });
+    setTimeout(() => setToast(null), 3000);
+  };
+  const handleEditCancel = () => { setShowEditModal(false); setRecordToEdit(null); };
 
   return (
     <DashboardLayout>
@@ -393,31 +562,22 @@ const PaymentPage: React.FC = () => {
                           )}
                         </td>
                         <td className="py-3 px-4 text-center">
-                          {record.status === 'Chưa thanh toán' ? (
+                          <div className="flex items-center justify-center gap-2">
                             <button
-                              onClick={async () => {
-                                setLoadingPay(true);
-                                await handlePay(record.id);
-                                setLoadingPay(false);
-                              }}
-                              className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition-colors shadow-md disabled:opacity-60 disabled:cursor-not-allowed"
-                              disabled={loadingPay}
+                              onClick={() => handleEditClick(record)}
+                              className="flex items-center justify-center gap-1 px-3 py-2 bg-yellow-100 text-yellow-800 font-semibold rounded-lg hover:bg-yellow-200 transition-colors shadow-sm"
+                              title="Sửa phiếu thu"
                             >
-                              {loadingPay ? (
-                                <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-                                </svg>
-                              ) : (
-                                <DollarSign className="h-5 w-5" />
-                              )}
-                              Thanh toán
+                              <Pencil className="h-5 w-5" /> Sửa
                             </button>
-                          ) : (
-                            <span className="flex items-center justify-center gap-1 px-4 py-2 text-gray-500 font-semibold">
-                              <CheckCircle className="h-5 w-5" /> Đã xử lý
-                            </span>
-                          )}
+                            <button
+                              onClick={() => handleDeleteClick(record)}
+                              className="flex items-center justify-center gap-1 px-3 py-2 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition-colors shadow-sm"
+                              title="Xóa phiếu thu"
+                            >
+                              <Trash2 className="h-5 w-5" /> Xóa
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -455,6 +615,10 @@ const PaymentPage: React.FC = () => {
         {/* Modal chi tiết phiếu thu */}
         {showDetailModal && recordToView && (
           <DetailModal record={recordToView} onClose={handleCloseDetail} onPay={handlePay} loadingPay={loadingPay} />
+        )}
+        {/* Modal sửa phiếu thu */}
+        {showEditModal && recordToEdit && (
+          <EditModal record={recordToEdit} onClose={handleEditCancel} onSave={handleEditSave} />
         )}
       </div>
     </DashboardLayout>
