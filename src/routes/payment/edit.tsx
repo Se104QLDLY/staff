@@ -1,34 +1,50 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { DollarSign, User, MapPin, Phone, Mail, CalendarDays, BadgeDollarSign, ArrowLeft, Save, Building2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { DollarSign, User, MapPin, Phone, Mail, CalendarDays, BadgeDollarSign, ArrowLeft, Save, Building2, Edit3 } from 'lucide-react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
-// Hàm lấy danh sách đại lý từ localStorage (hoặc mock nếu chưa có)
 const getAgencies = () => {
   const data = localStorage.getItem('agencies');
   if (data) return JSON.parse(data);
-  // Nếu chưa có, tạo 1 số đại lý mẫu
-  const defaultAgencies = [
-    { agency_id: 1, agency_name: 'Đại lý Hà Nội', phone_number: '0901234567', address: '123 Nguyễn Văn Linh, Q.7, TP.HCM', email: 'hanoi@example.com', representative: 'Nguyễn Văn A', debt_amount: 5000000 },
-    { agency_id: 2, agency_name: 'Đại lý Hồ Chí Minh', phone_number: '0902345678', address: '456 Lê Lợi, Q.1, TP.HCM', email: 'hcm@example.com', representative: 'Lê Thị B', debt_amount: 3500000 },
-    { agency_id: 3, agency_name: 'Đại lý Đà Nẵng', phone_number: '0903456789', address: '789 Trần Phú, Q.Hải Châu, TP.Đà Nẵng', email: 'danang@example.com', representative: 'Phạm Văn C', debt_amount: 2000000 }
-  ];
-  localStorage.setItem('agencies', JSON.stringify(defaultAgencies));
-  return defaultAgencies;
+  return [];
 };
 
-const AddPaymentReceipt: React.FC = () => {
+const EditPaymentReceipt: React.FC = () => {
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedAgency, setSelectedAgency] = useState<any>(null);
   const [agencies] = useState(getAgencies());
-
   const [formData, setFormData] = useState({
     agency_id: '',
     payment_date: '',
     amount_collected: '',
     note: ''
   });
+
+  useEffect(() => {
+    const loadPaymentData = async () => {
+      try {
+        const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+        const payment = payments.find((p: any) => p.payment_id === Number(id));
+        if (payment) {
+          setFormData({
+            agency_id: payment.agency_id.toString(),
+            payment_date: payment.payment_date,
+            amount_collected: payment.amount_collected.toString(),
+            note: payment.note || ''
+          });
+          const agency = agencies.find((a: any) => a.agency_id === payment.agency_id);
+          setSelectedAgency(agency);
+        }
+        setIsLoading(false);
+      } catch (error) {
+        setIsLoading(false);
+      }
+    };
+    loadPaymentData();
+  }, [id, agencies]);
 
   const handleAgencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const agencyId = parseInt(e.target.value);
@@ -46,22 +62,20 @@ const AddPaymentReceipt: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Lấy danh sách payment hiện tại
       const payments = JSON.parse(localStorage.getItem('payments') || '[]');
-      const newPayment = {
-        payment_id: Date.now(),
-        ...formData,
-        agency_id: Number(formData.agency_id),
-        amount_collected: Number(formData.amount_collected),
-        created_at: new Date().toISOString(),
-        user_id: 1,
-        user_name: 'Người dùng demo'
-      };
-      payments.push(newPayment);
-      localStorage.setItem('payments', JSON.stringify(payments));
+      const idx = payments.findIndex((p: any) => p.payment_id === Number(id));
+      if (idx !== -1) {
+        payments[idx] = {
+          ...payments[idx],
+          ...formData,
+          agency_id: Number(formData.agency_id),
+          amount_collected: Number(formData.amount_collected)
+        };
+        localStorage.setItem('payments', JSON.stringify(payments));
+      }
       navigate('/payment');
     } catch (error) {
-      console.error('Error submitting payment:', error);
+      //
     } finally {
       setIsSubmitting(false);
     }
@@ -71,6 +85,10 @@ const AddPaymentReceipt: React.FC = () => {
   const currentDebt = selectedAgency?.debt_amount || 0;
   const remainingDebt = Math.max(0, currentDebt - amount);
 
+  if (isLoading) {
+    return <DashboardLayout><div className="p-8 text-center">Đang tải...</div></DashboardLayout>;
+  }
+
   return (
     <DashboardLayout>
       <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 font-sans p-4 sm:p-6 lg:p-8 min-h-screen">
@@ -78,12 +96,12 @@ const AddPaymentReceipt: React.FC = () => {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                <DollarSign className="h-8 w-8 text-white" />
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                <Edit3 className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold text-slate-800">Lập Phiếu Thu</h1>
-                <p className="text-slate-600 text-base mt-1">Thu tiền từ đại lý</p>
+                <h1 className="text-4xl font-bold text-slate-800">Chỉnh Sửa Phiếu Thu</h1>
+                <p className="text-slate-600 text-base mt-1">Cập nhật thông tin phiếu thu #{id}</p>
               </div>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
@@ -101,7 +119,7 @@ const AddPaymentReceipt: React.FC = () => {
             {/* Agency Selection Card */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/80">
               <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-emerald-600" />
+                <Building2 className="h-5 w-5 text-amber-600" />
                 Chọn đại lý
               </h2>
               <div className="grid grid-cols-1 gap-6">
@@ -111,7 +129,7 @@ const AddPaymentReceipt: React.FC = () => {
                     name="agency_id"
                     value={formData.agency_id}
                     onChange={handleAgencyChange}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-slate-800 shadow-sm transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-800 shadow-sm transition-all duration-200"
                     required
                   >
                     <option value="">Chọn đại lý...</option>
@@ -127,43 +145,43 @@ const AddPaymentReceipt: React.FC = () => {
 
             {/* Agency Info Card - Hiển thị khi chọn đại lý */}
             {selectedAgency && (
-              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 shadow-sm border border-emerald-200/80">
-                <h2 className="text-xl font-bold text-emerald-800 mb-6">Thông tin đại lý</h2>
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 shadow-sm border border-amber-200/80">
+                <h2 className="text-xl font-bold text-amber-800 mb-6">Thông tin đại lý</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <User className="h-5 w-5 text-emerald-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-emerald-600 font-medium">Tên đại lý</p>
-                      <p className="text-lg font-semibold text-emerald-800">{selectedAgency.agency_name}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
-                      <MapPin className="h-5 w-5 text-teal-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-teal-600 font-medium">Địa chỉ</p>
-                      <p className="text-lg font-semibold text-teal-800">{selectedAgency.address}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center">
-                      <Phone className="h-5 w-5 text-cyan-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-cyan-600 font-medium">Điện thoại</p>
-                      <p className="text-lg font-semibold text-cyan-800">{selectedAgency.phone_number}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                      <Mail className="h-5 w-5 text-amber-600" />
+                      <User className="h-5 w-5 text-amber-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-amber-600 font-medium">Email</p>
-                      <p className="text-lg font-semibold text-amber-800">{selectedAgency.email}</p>
+                      <p className="text-sm text-amber-600 font-medium">Tên đại lý</p>
+                      <p className="text-lg font-semibold text-amber-800">{selectedAgency.agency_name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
+                      <MapPin className="h-5 w-5 text-orange-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-orange-600 font-medium">Địa chỉ</p>
+                      <p className="text-lg font-semibold text-orange-800">{selectedAgency.address}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-yellow-100 flex items-center justify-center">
+                      <Phone className="h-5 w-5 text-yellow-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-yellow-600 font-medium">Điện thoại</p>
+                      <p className="text-lg font-semibold text-yellow-800">{selectedAgency.phone_number}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-red-600 font-medium">Email</p>
+                      <p className="text-lg font-semibold text-red-800">{selectedAgency.email}</p>
                     </div>
                   </div>
                 </div>
@@ -185,7 +203,7 @@ const AddPaymentReceipt: React.FC = () => {
                       name="payment_date"
                       value={formData.payment_date}
                       onChange={handleChange}
-                      className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-slate-800 shadow-sm transition-all duration-200"
+                      className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-800 shadow-sm transition-all duration-200"
                       required
                     />
                   </div>
@@ -201,7 +219,7 @@ const AddPaymentReceipt: React.FC = () => {
                       name="amount_collected"
                       value={formData.amount_collected}
                       onChange={handleChange}
-                      className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-slate-800 shadow-sm transition-all duration-200"
+                      className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-800 shadow-sm transition-all duration-200"
                       placeholder="Nhập số tiền thu..."
                       min="0"
                       step="1000"
@@ -223,7 +241,7 @@ const AddPaymentReceipt: React.FC = () => {
                   value={formData.note}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full p-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-slate-800 shadow-sm transition-all duration-200"
+                  className="w-full p-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 text-slate-800 shadow-sm transition-all duration-200"
                   placeholder="Thêm ghi chú cho phiếu thu..."
                 />
               </div>
@@ -233,16 +251,16 @@ const AddPaymentReceipt: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Summary Card */}
               <div className="flex-1">
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-xl p-6 shadow-lg shadow-emerald-500/20">
+                <div className="bg-gradient-to-br from-amber-500 to-orange-500 text-white rounded-xl p-6 shadow-lg shadow-amber-500/20">
                   <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-semibold text-emerald-100">Tổng tiền thu</h3>
-                    <DollarSign size={24} className="text-emerald-200"/>
+                    <h3 className="text-lg font-semibold text-amber-100">Tổng tiền thu</h3>
+                    <DollarSign size={24} className="text-amber-200"/>
                   </div>
                   <p className="text-4xl font-bold tracking-tight">
-                    {amount.toLocaleString('vi-VN')} <span className="text-2xl font-semibold text-emerald-200">VND</span>
+                    {amount.toLocaleString('vi-VN')} <span className="text-2xl font-semibold text-amber-200">VND</span>
                   </p>
                   {selectedAgency && (
-                    <div className="mt-4 space-y-2 text-emerald-200 text-sm">
+                    <div className="mt-4 space-y-2 text-amber-200 text-sm">
                       <div className="flex justify-between">
                         <span>Nợ hiện tại:</span>
                         <span className="font-semibold">{currentDebt.toLocaleString('vi-VN')} VND</span>
@@ -255,7 +273,7 @@ const AddPaymentReceipt: React.FC = () => {
                   )}
                   {formData.note && (
                     <div className="mt-4 p-3 bg-white/10 rounded-lg">
-                      <p className="text-emerald-100 text-sm">{formData.note}</p>
+                      <p className="text-amber-100 text-sm">{formData.note}</p>
                     </div>
                   )}
                 </div>
@@ -275,12 +293,12 @@ const AddPaymentReceipt: React.FC = () => {
                     <button
                       type="submit"
                       disabled={isSubmitting || !selectedAgency}
-                      className="w-full flex items-center justify-center px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:bg-emerald-400 disabled:cursor-not-allowed font-semibold transition-all duration-200 shadow-sm hover:shadow-md shadow-emerald-500/20"
+                      className="w-full flex items-center justify-center px-4 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:bg-amber-400 disabled:cursor-not-allowed font-semibold transition-all duration-200 shadow-sm hover:shadow-md shadow-amber-500/20"
                     >
                       {isSubmitting ? (
-                        <><svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Đang lưu...</>
+                        <><svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Đang cập nhật...</>
                       ) : (
-                        <><Save size={16} className="mr-2"/>Lưu phiếu thu</>
+                        <><Save size={16} className="mr-2"/>Cập nhật phiếu thu</>
                       )}
                     </button>
                   </div>
@@ -294,4 +312,4 @@ const AddPaymentReceipt: React.FC = () => {
   );
 };
 
-export default AddPaymentReceipt;
+export default EditPaymentReceipt; 

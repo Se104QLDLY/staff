@@ -1,95 +1,254 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { DollarSign, User, MapPin, Phone, Mail, CalendarDays, BadgeDollarSign, ArrowLeft } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { DollarSign, User, MapPin, Phone, Mail, CalendarDays, BadgeDollarSign, ArrowLeft, Edit, Building2, FileText, Clock, UserCheck } from 'lucide-react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
-const mockData = [
-  {
-    id: 'PT001',
-    agency: 'Đại lý Hà Nội',
-    address: '123 Nguyễn Văn Linh, Q.7, TP.HCM',
-    phone: '0901234567',
-    email: 'hanoi@example.com',
-    paymentDate: '2024-01-15',
-    amount: 5000000,
-  },
-  {
-    id: 'PT002',
-    agency: 'Đại lý Hồ Chí Minh',
-    address: '456 Lê Lợi, Q.1, TP.HCM',
-    phone: '0902345678',
-    email: 'hcm@example.com',
-    paymentDate: '2024-01-14',
-    amount: 3500000,
-  },
-];
-
-const PaymentDetailPage: React.FC = () => {
-  const { id } = useParams();
+const PaymentDetail: React.FC = () => {
   const navigate = useNavigate();
-  const payment = mockData.find((item) => item.id === id);
+  const { id } = useParams<{ id: string }>();
+  const [isLoading, setIsLoading] = useState(true);
+  const [payment, setPayment] = useState<any>(null);
+  const [agency, setAgency] = useState<any>(null);
 
-  if (!payment) {
-    return (
-      <DashboardLayout>
-        <div className="max-w-xl mx-auto mt-16 text-center text-red-600 text-xl font-bold">Không tìm thấy phiếu thu!</div>
-      </DashboardLayout>
-    );
+  useEffect(() => {
+    const loadPaymentData = async () => {
+      try {
+        const payments = JSON.parse(localStorage.getItem('payments') || '[]');
+        const agencies = JSON.parse(localStorage.getItem('agencies') || '[]');
+        const payment = payments.find((p: any) => p.payment_id === Number(id));
+        setPayment(payment);
+        const agencyData = agencies.find((a: any) => a.agency_id === payment?.agency_id);
+        setAgency(agencyData);
+        setIsLoading(false);
+      } catch (error) {
+        setIsLoading(false);
+      }
+    };
+    loadPaymentData();
+  }, [id]);
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('vi-VN', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const formatDateTime = (dateString: string) => {
+    return new Date(dateString).toLocaleString('vi-VN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (isLoading) {
+    return <DashboardLayout><div className="p-8 text-center">Đang tải...</div></DashboardLayout>;
+  }
+  if (!payment || !agency) {
+    return <DashboardLayout><div className="p-8 text-center">Không tìm thấy phiếu thu!</div></DashboardLayout>;
   }
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-100 p-6 flex items-center justify-center">
-        <div className="max-w-3xl w-full mx-auto bg-white rounded-3xl shadow-2xl border-2 border-blue-200 p-10">
+      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 font-sans p-4 sm:p-6 lg:p-8 min-h-screen">
+        <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="flex items-center gap-4 mb-8">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 flex items-center justify-center shadow-lg">
-              <DollarSign className="h-8 w-8 text-white" />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                <DollarSign className="h-8 w-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold text-slate-800">Chi Tiết Phiếu Thu</h1>
+                <p className="text-slate-600 text-base mt-1">Thông tin chi tiết phiếu thu #{payment.payment_id}</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 drop-shadow uppercase tracking-wide">Chi tiết phiếu thu</h1>
-              <p className="text-gray-600 text-base mt-1">Thông tin chi tiết về phiếu thu tiền từ đại lý.</p>
-            </div>
-          </div>
-          <div className="space-y-6 text-lg">
-            <div className="flex items-center gap-3">
-              <User className="text-blue-500 h-6 w-6" />
-              <span className="font-bold text-blue-800 w-32 inline-block">Đại lý:</span>
-              <span>{payment.agency}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <MapPin className="text-cyan-500 h-6 w-6" />
-              <span className="font-bold text-blue-800 w-32 inline-block">Địa chỉ:</span>
-              <span>{payment.address}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Phone className="text-green-500 h-6 w-6" />
-              <span className="font-bold text-blue-800 w-32 inline-block">Điện thoại:</span>
-              <span>{payment.phone}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Mail className="text-purple-500 h-6 w-6" />
-              <span className="font-bold text-blue-800 w-32 inline-block">Email:</span>
-              <span>{payment.email}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <CalendarDays className="text-orange-500 h-6 w-6" />
-              <span className="font-bold text-blue-800 w-32 inline-block">Ngày thu tiền:</span>
-              <span>{payment.paymentDate}</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <BadgeDollarSign className="text-green-600 h-6 w-6" />
-              <span className="font-bold text-blue-800 w-32 inline-block">Số tiền thu:</span>
-              <span className="font-bold text-green-600">{payment.amount.toLocaleString('vi-VN')} VND</span>
+            <div className="flex items-center gap-3 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => navigate('/payment')}
+                className="flex items-center justify-center px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 hover:border-slate-400 transition-all duration-200 font-semibold gap-2 text-sm"
+              >
+                <ArrowLeft size={16} /><span>Quay lại</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/payment/edit/${payment.payment_id}`)}
+                className="flex items-center justify-center px-4 py-2.5 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-all duration-200 font-semibold gap-2 text-sm shadow-sm hover:shadow-md shadow-emerald-500/20"
+              >
+                <Edit size={16} /><span>Chỉnh sửa</span>
+              </button>
             </div>
           </div>
-          <div className="flex justify-end mt-10">
-            <button
-              onClick={() => navigate('/payment')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-gray-200 to-blue-100 text-gray-700 rounded-2xl hover:bg-blue-200 transition-colors font-bold text-lg shadow"
-            >
-              <ArrowLeft className="h-5 w-5" /> Quay lại
-            </button>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Main Content */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Payment Info Card */}
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/80">
+                <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-emerald-600" />
+                  Thông tin phiếu thu
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                      <CalendarDays className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-emerald-600 font-medium">Ngày thu tiền</p>
+                      <p className="text-lg font-semibold text-emerald-800">{formatDate(payment.payment_date)}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
+                      <BadgeDollarSign className="h-5 w-5 text-teal-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-teal-600 font-medium">Số tiền thu</p>
+                      <p className="text-lg font-semibold text-teal-800">{payment.amount_collected.toLocaleString('vi-VN')} VND</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center">
+                      <UserCheck className="h-5 w-5 text-cyan-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-cyan-600 font-medium">Người tạo</p>
+                      <p className="text-lg font-semibold text-cyan-800">{payment.user_name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                      <Clock className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-amber-600 font-medium">Thời gian tạo</p>
+                      <p className="text-lg font-semibold text-amber-800">{formatDateTime(payment.created_at)}</p>
+                    </div>
+                  </div>
+                </div>
+                {payment.note && (
+                  <div className="mt-6 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <p className="text-sm text-slate-600 font-medium mb-2">Ghi chú</p>
+                    <p className="text-slate-800">{payment.note}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Agency Info Card */}
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/80">
+                <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
+                  <Building2 className="h-5 w-5 text-emerald-600" />
+                  Thông tin đại lý
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                      <User className="h-5 w-5 text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-emerald-600 font-medium">Tên đại lý</p>
+                      <p className="text-lg font-semibold text-emerald-800">{agency.agency_name}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
+                      <MapPin className="h-5 w-5 text-teal-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-teal-600 font-medium">Địa chỉ</p>
+                      <p className="text-lg font-semibold text-teal-800">{agency.address}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center">
+                      <Phone className="h-5 w-5 text-cyan-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-cyan-600 font-medium">Điện thoại</p>
+                      <p className="text-lg font-semibold text-cyan-800">{agency.phone_number}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-amber-600 font-medium">Email</p>
+                      <p className="text-lg font-semibold text-amber-800">{agency.email}</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-emerald-700 font-medium">Người đại diện:</span>
+                    <span className="text-emerald-800 font-semibold">{agency.representative}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Summary Card */}
+              <div className="bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-xl p-6 shadow-lg shadow-emerald-500/20">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold text-emerald-100">Tổng tiền thu</h3>
+                  <DollarSign size={24} className="text-emerald-200"/>
+                </div>
+                <p className="text-4xl font-bold tracking-tight mb-4">
+                  {payment.amount_collected.toLocaleString('vi-VN')} <span className="text-2xl font-semibold text-emerald-200">VND</span>
+                </p>
+                <div className="space-y-2 text-emerald-200 text-sm">
+                  <div className="flex justify-between">
+                    <span>Nợ hiện tại:</span>
+                    <span className="font-semibold">{agency.debt_amount.toLocaleString('vi-VN')} VND</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Nợ còn lại:</span>
+                    <span className="font-semibold">{(agency.debt_amount - payment.amount_collected).toLocaleString('vi-VN')} VND</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/80">
+                <h3 className="text-lg font-bold text-slate-800 mb-4">Thao tác nhanh</h3>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => navigate(`/payment/edit/${payment.payment_id}`)}
+                    className="w-full flex items-center justify-center px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 font-semibold transition-all duration-200 shadow-sm hover:shadow-md shadow-emerald-500/20"
+                  >
+                    <Edit size={16} className="mr-2"/>
+                    Chỉnh sửa phiếu thu
+                  </button>
+                  <button
+                    onClick={() => navigate('/payment')}
+                    className="w-full flex items-center justify-center px-4 py-3 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300/70 font-semibold transition-all duration-200"
+                  >
+                    <ArrowLeft size={16} className="mr-2"/>
+                    Quay lại danh sách
+                  </button>
+                </div>
+              </div>
+
+              {/* Payment Status */}
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/80">
+                <h3 className="text-lg font-bold text-slate-800 mb-4">Trạng thái</h3>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-emerald-500 rounded-full"></div>
+                  <span className="text-emerald-700 font-semibold">Đã hoàn thành</span>
+                </div>
+                <p className="text-slate-600 text-sm mt-2">
+                  Phiếu thu đã được xác nhận và lưu vào hệ thống
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -97,4 +256,4 @@ const PaymentDetailPage: React.FC = () => {
   );
 };
 
-export default PaymentDetailPage; 
+export default PaymentDetail; 
