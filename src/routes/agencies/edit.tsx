@@ -14,7 +14,7 @@ interface AgencyFormData {
   address: string;
   phone: string;
   email: string;
-  manager?: string;
+  manager: string;
   creditLimit: number;
   status: 'Hoạt động' | 'Tạm dừng' | 'Ngừng hợp tác';
 }
@@ -49,6 +49,7 @@ const schema = yup.object({
     .email('Email không hợp lệ'),
   manager: yup
     .string()
+    .required('Người quản lý là bắt buộc')
     .max(50, 'Tên người quản lý không được vượt quá 50 ký tự'),
   creditLimit: yup
     .number()
@@ -58,7 +59,7 @@ const schema = yup.object({
   status: yup
     .string()
     .required('Trạng thái là bắt buộc')
-    .oneOf(['Hoạt động', 'Tạm dừng', 'Ngừng hợp tác']),
+    .oneOf(['Hoạt động', 'Tạm dừng', 'Ngừng hợp tác'] as const, 'Trạng thái không hợp lệ'),
 });
 
 const EditAgencyPage: React.FC = () => {
@@ -72,6 +73,18 @@ const EditAgencyPage: React.FC = () => {
     formState: { errors, isSubmitting },
   } = useForm<AgencyFormData>({
     resolver: yupResolver(schema),
+    defaultValues: {
+      code: '',
+      name: '',
+      typeId: 0,
+      district: '',
+      address: '',
+      phone: '',
+      email: '',
+      manager: '',
+      creditLimit: 1000000,
+      status: 'Hoạt động',
+    },
   });
 
   // Mock data - trong thực tế sẽ fetch từ API
@@ -99,13 +112,13 @@ const EditAgencyPage: React.FC = () => {
       setValue('address', existingAgency.address);
       setValue('phone', existingAgency.phone);
       setValue('email', existingAgency.email);
-      setValue('manager', existingAgency.manager);
+      setValue('manager', existingAgency.manager || '');
       setValue('creditLimit', existingAgency.creditLimit);
       setValue('status', existingAgency.status);
     }
   }, [setValue]);
 
-  const onSubmit = async (data: AgencyFormData) => {
+  const onSubmit: (data: AgencyFormData) => Promise<void> = async (data) => {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -134,16 +147,16 @@ const EditAgencyPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100 p-6 flex items-center justify-center">
         <div className="max-w-2xl w-full mx-auto bg-white rounded-3xl shadow-2xl p-10 border-2 border-blue-100">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-400 flex items-center justify-center shadow-lg">
                 <Edit className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 drop-shadow uppercase tracking-wide">Chỉnh sửa đại lý</h1>
-                <p className="text-gray-600 text-base mt-1">Cập nhật thông tin đại lý {existingAgency.code}</p>
+                <h1 className="text-2xl md:text-3xl font-extrabold text-blue-900 drop-shadow uppercase tracking-wide">Chỉnh sửa đại lý</h1>
+                <p className="text-blue-700 text-base mt-1">Cập nhật thông tin đại lý {existingAgency.code}</p>
               </div>
             </div>
             <Link to="/agencies" className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors font-semibold shadow-md">
@@ -323,7 +336,7 @@ const EditAgencyPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 py-3 bg-gradient-to-r from-green-600 to-emerald-500 text-white font-bold rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition-all text-lg border-2 border-transparent hover:border-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-gradient-to-r from-blue-600 via-cyan-500 to-blue-400 text-white font-bold rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition-all text-lg border-2 border-transparent hover:border-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSubmitting ? (
                   <div className="flex items-center justify-center">
@@ -338,7 +351,7 @@ const EditAgencyPage: React.FC = () => {
               </button>
               <Link
                 to="/agencies"
-                className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl shadow-lg hover:bg-gray-200 transition-all text-lg text-center flex items-center justify-center gap-2"
+                className="flex-1 py-3 bg-blue-100 text-blue-700 font-bold rounded-xl shadow-lg hover:bg-blue-200 transition-all text-lg text-center flex items-center justify-center gap-2"
               >
                 <ArrowLeft className="h-5 w-5" /> Hủy bỏ
               </Link>
