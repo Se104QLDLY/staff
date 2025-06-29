@@ -78,7 +78,7 @@ const AddPaymentReceipt: React.FC = () => {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
                 <DollarSign className="h-8 w-8 text-white" />
               </div>
               <div>
@@ -101,7 +101,7 @@ const AddPaymentReceipt: React.FC = () => {
             {/* Agency Selection Card */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/80">
               <h2 className="text-xl font-bold text-slate-800 mb-6 flex items-center gap-2">
-                <Building2 className="h-5 w-5 text-emerald-600" />
+                <Building2 className="h-5 w-5 text-blue-600" />
                 Chọn đại lý
               </h2>
               <div className="grid grid-cols-1 gap-6">
@@ -111,7 +111,7 @@ const AddPaymentReceipt: React.FC = () => {
                     name="agency_id"
                     value={formData.agency_id}
                     onChange={handleAgencyChange}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-slate-800 shadow-sm transition-all duration-200"
+                    className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 shadow-sm transition-all duration-200"
                     required
                   >
                     <option value="">Chọn đại lý...</option>
@@ -127,25 +127,25 @@ const AddPaymentReceipt: React.FC = () => {
 
             {/* Agency Info Card - Hiển thị khi chọn đại lý */}
             {selectedAgency && (
-              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 shadow-sm border border-emerald-200/80">
-                <h2 className="text-xl font-bold text-emerald-800 mb-6">Thông tin đại lý</h2>
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 shadow-sm border border-blue-200/80">
+                <h2 className="text-xl font-bold text-blue-800 mb-6">Thông tin đại lý</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
-                      <User className="h-5 w-5 text-emerald-600" />
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <User className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-emerald-600 font-medium">Tên đại lý</p>
-                      <p className="text-lg font-semibold text-emerald-800">{selectedAgency.agency_name}</p>
+                      <p className="text-sm text-blue-600 font-medium">Tên đại lý</p>
+                      <p className="text-lg font-semibold text-blue-800">{selectedAgency.agency_name}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-teal-100 flex items-center justify-center">
-                      <MapPin className="h-5 w-5 text-teal-600" />
+                    <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                      <MapPin className="h-5 w-5 text-indigo-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-teal-600 font-medium">Địa chỉ</p>
-                      <p className="text-lg font-semibold text-teal-800">{selectedAgency.address}</p>
+                      <p className="text-sm text-indigo-600 font-medium">Địa chỉ</p>
+                      <p className="text-lg font-semibold text-indigo-800">{selectedAgency.address}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -158,12 +158,12 @@ const AddPaymentReceipt: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
-                      <Mail className="h-5 w-5 text-amber-600" />
+                    <div className="w-10 h-10 rounded-lg bg-sky-100 flex items-center justify-center">
+                      <Mail className="h-5 w-5 text-sky-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-amber-600 font-medium">Email</p>
-                      <p className="text-lg font-semibold text-amber-800">{selectedAgency.email}</p>
+                      <p className="text-sm text-sky-600 font-medium">Email</p>
+                      <p className="text-lg font-semibold text-sky-800">{selectedAgency.email}</p>
                     </div>
                   </div>
                 </div>
@@ -185,7 +185,7 @@ const AddPaymentReceipt: React.FC = () => {
                       name="payment_date"
                       value={formData.payment_date}
                       onChange={handleChange}
-                      className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-slate-800 shadow-sm transition-all duration-200"
+                      className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 shadow-sm transition-all duration-200"
                       required
                     />
                   </div>
@@ -201,7 +201,7 @@ const AddPaymentReceipt: React.FC = () => {
                       name="amount_collected"
                       value={formData.amount_collected}
                       onChange={handleChange}
-                      className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-slate-800 shadow-sm transition-all duration-200"
+                      className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 shadow-sm transition-all duration-200"
                       placeholder="Nhập số tiền thu..."
                       min="0"
                       step="1000"
@@ -223,7 +223,7 @@ const AddPaymentReceipt: React.FC = () => {
                   value={formData.note}
                   onChange={handleChange}
                   rows={3}
-                  className="w-full p-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-slate-800 shadow-sm transition-all duration-200"
+                  className="w-full p-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 shadow-sm transition-all duration-200"
                   placeholder="Thêm ghi chú cho phiếu thu..."
                 />
               </div>
@@ -233,16 +233,16 @@ const AddPaymentReceipt: React.FC = () => {
             <div className="flex flex-col lg:flex-row gap-6">
               {/* Summary Card */}
               <div className="flex-1">
-                <div className="bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-xl p-6 shadow-lg shadow-emerald-500/20">
+                <div className="bg-gradient-to-br from-blue-500 to-indigo-500 text-white rounded-xl p-6 shadow-lg shadow-blue-500/20">
                   <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-lg font-semibold text-emerald-100">Tổng tiền thu</h3>
-                    <DollarSign size={24} className="text-emerald-200"/>
+                    <h3 className="text-lg font-semibold text-blue-100">Tổng tiền thu</h3>
+                    <DollarSign size={24} className="text-blue-200"/>
                   </div>
                   <p className="text-4xl font-bold tracking-tight">
-                    {amount.toLocaleString('vi-VN')} <span className="text-2xl font-semibold text-emerald-200">VND</span>
+                    {amount.toLocaleString('vi-VN')} <span className="text-2xl font-semibold text-blue-200">VND</span>
                   </p>
                   {selectedAgency && (
-                    <div className="mt-4 space-y-2 text-emerald-200 text-sm">
+                    <div className="mt-4 space-y-2 text-blue-200 text-sm">
                       <div className="flex justify-between">
                         <span>Nợ hiện tại:</span>
                         <span className="font-semibold">{currentDebt.toLocaleString('vi-VN')} VND</span>
@@ -255,7 +255,7 @@ const AddPaymentReceipt: React.FC = () => {
                   )}
                   {formData.note && (
                     <div className="mt-4 p-3 bg-white/10 rounded-lg">
-                      <p className="text-emerald-100 text-sm">{formData.note}</p>
+                      <p className="text-blue-100 text-sm">{formData.note}</p>
                     </div>
                   )}
                 </div>
@@ -275,7 +275,7 @@ const AddPaymentReceipt: React.FC = () => {
                     <button
                       type="submit"
                       disabled={isSubmitting || !selectedAgency}
-                      className="w-full flex items-center justify-center px-4 py-3 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:bg-emerald-400 disabled:cursor-not-allowed font-semibold transition-all duration-200 shadow-sm hover:shadow-md shadow-emerald-500/20"
+                      className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed font-semibold transition-all duration-200 shadow-sm hover:shadow-md shadow-blue-500/20"
                     >
                       {isSubmitting ? (
                         <><svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Đang lưu...</>

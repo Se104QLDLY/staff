@@ -71,7 +71,7 @@ const EditAgencyPage: React.FC = () => {
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<AgencyFormData>({
-    resolver: yupResolver(schema),
+    resolver: yupResolver(schema) as any,
   });
 
   // Mock data - trong thực tế sẽ fetch từ API
@@ -138,12 +138,12 @@ const EditAgencyPage: React.FC = () => {
         <div className="max-w-2xl w-full mx-auto bg-white rounded-3xl shadow-2xl p-10 border-2 border-blue-100">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-400 flex items-center justify-center shadow-lg shadow-blue-400/30">
                 <Edit className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-extrabold text-gray-900 drop-shadow uppercase tracking-wide">Chỉnh sửa đại lý</h1>
-                <p className="text-gray-600 text-base mt-1">Cập nhật thông tin đại lý {existingAgency.code}</p>
+                <h1 className="text-2xl md:text-3xl font-extrabold text-blue-800 drop-shadow uppercase tracking-wide">Chỉnh sửa đại lý</h1>
+                <p className="text-blue-600 text-base mt-1">Cập nhật thông tin đại lý {existingAgency.code}</p>
               </div>
             </div>
             <Link to="/agencies" className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors font-semibold shadow-md">
@@ -323,7 +323,7 @@ const EditAgencyPage: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="flex-1 py-3 bg-gradient-to-r from-green-600 to-emerald-500 text-white font-bold rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition-all text-lg border-2 border-transparent hover:border-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 font-bold text-lg shadow-md transition-all"
               >
                 {isSubmitting ? (
                   <div className="flex items-center justify-center">
@@ -336,12 +336,13 @@ const EditAgencyPage: React.FC = () => {
                   </>
                 )}
               </button>
-              <Link
-                to="/agencies"
-                className="flex-1 py-3 bg-gray-100 text-gray-700 font-bold rounded-xl shadow-lg hover:bg-gray-200 transition-all text-lg text-center flex items-center justify-center gap-2"
+              <button
+                type="button"
+                onClick={() => navigate('/agencies')}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 font-bold text-lg shadow-md transition-all"
               >
                 <ArrowLeft className="h-5 w-5" /> Hủy bỏ
-              </Link>
+              </button>
             </div>
           </form>
         </div>

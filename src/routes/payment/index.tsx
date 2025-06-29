@@ -449,15 +449,9 @@ const PaymentPage: React.FC = () => {
     setLoadingPay(false);
   };
 
-  const handleEditClick = (record: PaymentRecord) => { setRecordToEdit(record); setShowEditModal(true); };
-  const handleEditSave = async (updated: PaymentRecord) => {
-    setPaymentRecords(records => records.map(r => r.id === updated.id ? updated : r));
-    setShowEditModal(false);
-    setRecordToEdit(null);
-    setToast({ type: 'success', message: `Đã cập nhật phiếu thu ${updated.id} thành công!` });
-    setTimeout(() => setToast(null), 3000);
+  const handleEditClick = (record: PaymentRecord) => {
+    window.location.href = `/payment/edit/${record.id}`;
   };
-  const handleEditCancel = () => { setShowEditModal(false); setRecordToEdit(null); };
 
   return (
     <DashboardLayout>
@@ -615,10 +609,6 @@ const PaymentPage: React.FC = () => {
         {/* Modal chi tiết phiếu thu */}
         {showDetailModal && recordToView && (
           <DetailModal record={recordToView} onClose={handleCloseDetail} onPay={handlePay} loadingPay={loadingPay} />
-        )}
-        {/* Modal sửa phiếu thu */}
-        {showEditModal && recordToEdit && (
-          <EditModal record={recordToEdit} onClose={handleEditCancel} onSave={handleEditSave} />
         )}
       </div>
     </DashboardLayout>
