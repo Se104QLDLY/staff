@@ -133,12 +133,8 @@ const AddPaymentReceipt: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
                       <User className="h-5 w-5 text-blue-600" />
-                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <User className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-blue-600 font-medium">Tên đại lý</p>
-                      <p className="text-lg font-semibold text-blue-800">{selectedAgency.agency_name}</p>
                       <p className="text-sm text-blue-600 font-medium">Tên đại lý</p>
                       <p className="text-lg font-semibold text-blue-800">{selectedAgency.agency_name}</p>
                     </div>
