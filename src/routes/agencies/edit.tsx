@@ -14,7 +14,7 @@ interface AgencyFormData {
   address: string;
   phone: string;
   email: string;
-  manager?: string;
+  manager: string;
   creditLimit: number;
   status: 'Hoạt động' | 'Tạm dừng' | 'Ngừng hợp tác';
 }
@@ -49,6 +49,7 @@ const schema = yup.object({
     .email('Email không hợp lệ'),
   manager: yup
     .string()
+    .required('Người quản lý là bắt buộc')
     .max(50, 'Tên người quản lý không được vượt quá 50 ký tự'),
   creditLimit: yup
     .number()
@@ -58,7 +59,7 @@ const schema = yup.object({
   status: yup
     .string()
     .required('Trạng thái là bắt buộc')
-    .oneOf(['Hoạt động', 'Tạm dừng', 'Ngừng hợp tác']),
+    .oneOf(['Hoạt động', 'Tạm dừng', 'Ngừng hợp tác'] as const, 'Trạng thái không hợp lệ'),
 });
 
 const EditAgencyPage: React.FC = () => {
@@ -99,13 +100,13 @@ const EditAgencyPage: React.FC = () => {
       setValue('address', existingAgency.address);
       setValue('phone', existingAgency.phone);
       setValue('email', existingAgency.email);
-      setValue('manager', existingAgency.manager);
+      setValue('manager', existingAgency.manager || '');
       setValue('creditLimit', existingAgency.creditLimit);
       setValue('status', existingAgency.status);
     }
   }, [setValue]);
 
-  const onSubmit = async (data: AgencyFormData) => {
+  const onSubmit: (data: AgencyFormData) => Promise<void> = async (data) => {
     try {
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -134,7 +135,7 @@ const EditAgencyPage: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-cyan-50 to-blue-100 p-6 flex items-center justify-center">
         <div className="max-w-2xl w-full mx-auto bg-white rounded-3xl shadow-2xl p-10 border-2 border-blue-100">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-4">

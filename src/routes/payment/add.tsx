@@ -73,7 +73,7 @@ const AddPaymentReceipt: React.FC = () => {
 
   return (
     <DashboardLayout>
-      <div className="bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 font-sans p-4 sm:p-6 lg:p-8 min-h-screen">
+      <div className=" font-sans p-4 sm:p-6 lg:p-8 min-h-screen">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
@@ -82,15 +82,15 @@ const AddPaymentReceipt: React.FC = () => {
                 <DollarSign className="h-8 w-8 text-white" />
               </div>
               <div>
-                <h1 className="text-4xl font-bold text-slate-800">Lập Phiếu Thu</h1>
-                <p className="text-slate-600 text-base mt-1">Thu tiền từ đại lý</p>
+                <h1 className="text-4xl font-bold text-blue-800">Lập Phiếu Thu</h1>
+                <p className="text-blue-600 text-base mt-1">Thu tiền từ đại lý</p>
               </div>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <button
                 type="button"
                 onClick={() => navigate('/payment')}
-                className="flex items-center justify-center px-4 py-2.5 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-100 hover:border-slate-400 transition-all duration-200 font-semibold gap-2 text-sm"
+                className="flex items-center justify-center px-4 py-2.5 border border-blue-200 text-blue-700 rounded-lg hover:bg-blue-50 hover:border-blue-400 transition-all duration-200 font-semibold gap-2 text-sm"
               >
                 <ArrowLeft size={16} /><span>Quay lại</span>
               </button>
@@ -106,7 +106,7 @@ const AddPaymentReceipt: React.FC = () => {
               </h2>
               <div className="grid grid-cols-1 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Đại lý <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">Đại lý <span className="text-red-500">*</span></label>
                   <select
                     name="agency_id"
                     value={formData.agency_id}
@@ -114,9 +114,9 @@ const AddPaymentReceipt: React.FC = () => {
                     className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-800 shadow-sm transition-all duration-200"
                     required
                   >
-                    <option value="">Chọn đại lý...</option>
-                    {agencies.map(agency => (
-                      <option key={agency.agency_id} value={agency.agency_id}>
+                    <option value="" className="text-gray-700">Chọn đại lý...</option>
+                    {agencies.map((agency: any) => (
+                      <option key={agency.agency_id} value={agency.agency_id} className="text-black">
                         {agency.agency_name} - Nợ: {agency.debt_amount.toLocaleString('vi-VN')} VND
                       </option>
                     ))}
@@ -133,8 +133,12 @@ const AddPaymentReceipt: React.FC = () => {
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
                       <User className="h-5 w-5 text-blue-600" />
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <User className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
+                      <p className="text-sm text-blue-600 font-medium">Tên đại lý</p>
+                      <p className="text-lg font-semibold text-blue-800">{selectedAgency.agency_name}</p>
                       <p className="text-sm text-blue-600 font-medium">Tên đại lý</p>
                       <p className="text-lg font-semibold text-blue-800">{selectedAgency.agency_name}</p>
                     </div>
@@ -149,12 +153,12 @@ const AddPaymentReceipt: React.FC = () => {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-cyan-100 flex items-center justify-center">
-                      <Phone className="h-5 w-5 text-cyan-600" />
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <Phone className="h-5 w-5 text-blue-600" />
                     </div>
                     <div>
-                      <p className="text-sm text-cyan-600 font-medium">Điện thoại</p>
-                      <p className="text-lg font-semibold text-cyan-800">{selectedAgency.phone_number}</p>
+                      <p className="text-sm text-blue-600 font-medium">Điện thoại</p>
+                      <p className="text-lg font-semibold text-blue-800">{selectedAgency.phone_number}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -171,13 +175,13 @@ const AddPaymentReceipt: React.FC = () => {
             )}
 
             {/* Payment Info Card */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/80">
-              <h2 className="text-xl font-bold text-slate-800 mb-6">Thông tin thu tiền</h2>
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-200/80">
+              <h2 className="text-xl font-bold text-black mb-6">Thông tin thu tiền</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Ngày thu tiền <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">Ngày thu tiền <span className="text-red-500">*</span></label>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-blue-400">
                       <CalendarDays size={18} />
                     </span>
                     <input
@@ -191,9 +195,9 @@ const AddPaymentReceipt: React.FC = () => {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-600 mb-1.5">Số tiền thu (VND) <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-semibold text-gray-900 mb-1.5">Số tiền thu (VND) <span className="text-red-500">*</span></label>
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-blue-400">
                       <BadgeDollarSign size={18} />
                     </span>
                     <input
@@ -210,14 +214,14 @@ const AddPaymentReceipt: React.FC = () => {
                     />
                   </div>
                   {selectedAgency && (
-                    <p className="text-sm text-slate-500 mt-1">
-                      Nợ hiện tại: <span className="font-semibold text-amber-600">{selectedAgency.debt_amount.toLocaleString('vi-VN')} VND</span>
+                    <p className="text-sm text-gray-700 mt-1">
+                      Nợ hiện tại: <span className="font-semibold text-cyan-600">{selectedAgency.debt_amount.toLocaleString('vi-VN')} VND</span>
                     </p>
                   )}
                 </div>
               </div>
               <div className="mt-6">
-                <label className="block text-sm font-medium text-slate-600 mb-1.5">Ghi chú</label>
+                <label className="block text-sm font-semibold text-gray-900 mb-1.5">Ghi chú</label>
                 <textarea
                   name="note"
                   value={formData.note}
@@ -263,12 +267,12 @@ const AddPaymentReceipt: React.FC = () => {
 
               {/* Submit Buttons */}
               <div className="lg:w-80">
-                <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200/80">
+                <div className="bg-white rounded-xl p-6 shadow-sm border border-blue-200/80">
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => navigate('/payment')}
-                      className="w-full flex items-center justify-center px-4 py-3 bg-slate-200 text-slate-800 rounded-lg hover:bg-slate-300/70 font-semibold transition-all duration-200"
+                      className="w-full flex items-center justify-center px-4 py-3 bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 font-semibold transition-all duration-200"
                     >
                       Hủy
                     </button>

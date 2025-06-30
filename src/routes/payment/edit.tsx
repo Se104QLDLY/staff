@@ -89,9 +89,9 @@ const EditPaymentReceipt = () => {
         const payment = payments.find((p) => p.payment_id === Number(id));
         if (payment) {
           setFormData({
-            agency_id: payment.agency_id.toString(),
-            payment_date: payment.payment_date,
-            amount_collected: payment.amount_collected.toString(),
+            agency_id: payment.agency_id?.toString() || '',
+            payment_date: payment.payment_date || '',
+            amount_collected: payment.amount_collected?.toString() || '',
             note: payment.note || ''
           });
           const agency = agencies.find((a) => a.agency_id === payment.agency_id);
