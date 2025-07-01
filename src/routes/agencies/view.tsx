@@ -169,44 +169,12 @@ const ViewAgencyPage = () => {
                                         <tr key={index} className="bg-white border-b last:border-b-0 hover:bg-slate-50">
                                             <td className="px-6 py-4 font-medium text-slate-900">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
                                             <td className="px-6 py-4">{item.description}</td>
-                                            <td className={`px-6 py-4 text-right font-semibold ${item.amount > 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                {item.amount.toLocaleString('vi-VN')}
-                                            </td>
+                                            <td className={`px-6 py-4 text-right font-semibold ${item.amount > 0 ? 'text-red-600' : 'text-green-600'}`}>{item.amount.toLocaleString('vi-VN')}</td>
                                             <td className="px-6 py-4 text-right font-semibold text-slate-800">{item.balance.toLocaleString('vi-VN')}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                        </div>
-                    </div>
-                );
-            case 'settings':
-                return (
-                     <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200/80 animate-fade-in">
-                        <h2 className="text-xl font-bold text-slate-800 mb-5">Cài đặt</h2>
-                        {/* Danger Zone */}
-                        <div className="border-2 border-red-500/50 rounded-xl p-5 mt-6 bg-red-50/30">
-                           <div className="flex items-start gap-4">
-                               <div className="w-10 h-10 flex-shrink-0 rounded-full bg-red-100 flex items-center justify-center">
-                                    <ShieldAlert className="h-6 w-6 text-red-600" />
-                               </div>
-                               <div>
-                                    <h3 className="text-lg font-bold text-red-800">Vùng nguy hiểm</h3>
-                                    <p className="text-red-700/90 mt-1 text-sm">
-                                        Các hành động sau đây sẽ ảnh hưởng vĩnh viễn đến dữ liệu của đại lý. Hãy chắc chắn trước khi thực hiện.
-                                    </p>
-                               </div>
-                           </div>
-                            <div className="mt-5 space-y-3">
-                                <button className="w-full text-left flex justify-between items-center p-3 rounded-lg border border-yellow-300 bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition">
-                                    <span className="font-semibold">Tạm dừng hợp tác</span>
-                                    <AlertCircle className="h-5 w-5" />
-                                </button>
-                                <button className="w-full text-left flex justify-between items-center p-3 rounded-lg border border-red-300 bg-red-100 text-red-800 hover:bg-red-200 transition">
-                                    <span className="font-semibold">Xóa đại lý</span>
-                                    <Trash2 className="h-5 w-5" />
-                                </button>
-                            </div>
                         </div>
                     </div>
                 );
@@ -223,9 +191,7 @@ const ViewAgencyPage = () => {
                                      <label className="flex items-center text-sm font-medium text-slate-500 mb-1">
                                         <BadgeCheck className="w-4 h-4 mr-2"/>Loại đại lý
                                     </label>
-                                    <span className={`inline-block px-3 py-1.5 rounded-md text-sm font-bold ${getAgencyTypeChipStyle(agency.type.name)}`}>
-                                        {agency.type.name}
-                                    </span>
+                                    <span className={`inline-block px-3 py-1.5 rounded-md text-sm font-bold ${getAgencyTypeChipStyle(agency.type.name)}`}>{agency.type.name}</span>
                                 </div>
                                 <InfoField label="Địa chỉ" value={agency.address} icon={<MapPin className="w-4 h-4 mr-2"/>} className="md:col-span-2"/>
                                 <InfoField label="Quận/Huyện" value={agency.district} icon={<MapPin className="w-4 h-4 mr-2"/>}/>
@@ -283,7 +249,6 @@ const ViewAgencyPage = () => {
                             <div className="flex items-center gap-2 p-1.5 bg-slate-200/80 rounded-lg mb-6">
                                 <TabButton label="Tổng quan" icon={<Info className="h-4 w-4" />} isActive={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
                                 <TabButton label="Lịch sử công nợ" icon={<List className="h-4 w-4" />} isActive={activeTab === 'debt-history'} onClick={() => setActiveTab('debt-history')} />
-                                <TabButton label="Cài đặt" icon={<Settings className="h-4 w-4" />} isActive={activeTab === 'settings'} onClick={() => setActiveTab('settings')} />
                             </div>
                             {renderContent()}
                         </div>
