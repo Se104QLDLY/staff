@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Receipt, Trash2, Eye, AlertCircle, CheckCircle, Users, Mail, Phone, MapPin, CalendarDays, DollarSign, Search, MoreVertical, ListChecks, LayoutGrid, List, XCircle, Clock, PlusCircle, Pencil, User, BadgeDollarSign, ArrowLeft } from 'lucide-react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
+import { fetchPayments, deletePayment, updatePaymentStatus } from '../../api/payment.api';
+import { useAuth } from '../../hooks/useAuth';
+import { fetchAssignedAgencies } from '../../api/staffAgency.api';
+import type { PaymentItem } from '../../api/payment.api';
 
 interface PaymentRecord {
   id: string;
+  agency_id: number;
   agency: string;
   address: string;
   phone: string;
@@ -15,20 +20,11 @@ interface PaymentRecord {
 }
 
 const currentAgency = {
-  name: 'Đại lý Hà Nội',
-  address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội',
-  phone: '0901234567',
-  email: 'hanoi@example.com'
+  name: '',
+  address: '',
+  phone: '',
+  email: ''
 };
-
-const initialPaymentRecords: PaymentRecord[] = [
-  { id: 'PT001', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-21', amount: 5000000, status: 'Đã thanh toán' },
-  { id: 'PT007', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-20', amount: 3200000, status: 'Chưa thanh toán' },
-  { id: 'PT015', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-19', amount: 4800000, status: 'Đã thanh toán' },
-  { id: 'PT023', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-18', amount: 2100000, status: 'Chưa thanh toán' },
-  { id: 'PT031', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-17', amount: 6500000, status: 'Đã thanh toán' },
-  { id: 'PT045', agency: 'Đại lý Hà Nội', address: 'Số 1, Phố Tràng Tiền, Hoàn Kiếm, Hà Nội', phone: '0901234567', email: 'hanoi@example.com', paymentDate: '2024-07-16', amount: 3800000, status: 'Chưa thanh toán' },
-];
 
 const PaymentCard: React.FC<{
   record: PaymentRecord;
@@ -234,6 +230,8 @@ const DeleteModal: React.FC<{
 };
 
 const PaymentPage: React.FC = () => {
+  const { user } = useAuth();
+  const [assignedAgencyIds, setAssignedAgencyIds] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
@@ -243,12 +241,41 @@ const PaymentPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const itemsPerPage = 8;
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>(initialPaymentRecords);
+  const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
   const [loadingPay, setLoadingPay] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    (async () => {
+      if (!user) return;
+      try {
+        // Lấy danh sách agency staff quản lý
+        const assigned = await fetchAssignedAgencies(user.id);
+        const agencyIds = assigned.map(a => a.agency_id);
+        setAssignedAgencyIds(agencyIds);
+        // Lấy tất cả payment rồi filter theo agency
+        const data: PaymentItem[] = await fetchPayments();
+        const filtered = data.filter(item => agencyIds.includes(item.agency_id));
+        const records: PaymentRecord[] = filtered.map(item => ({
+          id: item.payment_id.toString(),
+          agency_id: item.agency_id,
+          agency: item.agency_name,
+          address: currentAgency.address,
+          phone: currentAgency.phone,
+          email: currentAgency.email,
+          paymentDate: item.payment_date,
+          amount: Number(item.amount_collected),
+          status: item.status === 'completed' ? 'Đã thanh toán' : 'Chưa thanh toán',
+        }));
+        setPaymentRecords(records);
+      } catch (error) {
+        console.error('Error fetching payment records:', error);
+      }
+    })();
+  }, [user]);
+
   const filteredRecords = paymentRecords.filter(record =>
-    record.agency === currentAgency.name && (
+    (
       record.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       record.paymentDate.includes(searchTerm) ||
       record.amount.toString().includes(searchTerm)
@@ -267,13 +294,14 @@ const PaymentPage: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (recordToDelete) {
       try {
-        await new Promise(resolve => setTimeout(resolve, 500));
-        setPaymentRecords(paymentRecords.filter(r => r.id !== recordToDelete.id));
+        await deletePayment(Number(recordToDelete.id));
+        setPaymentRecords(prev => prev.filter(r => r.id !== recordToDelete.id));
         setShowDeleteModal(false);
         setRecordToDelete(null);
         setToast({ type: 'success', message: `Đã xóa phiếu thu ${recordToDelete.id} thành công!` });
         setTimeout(() => setToast(null), 3000);
       } catch (error) {
+        console.error('Error deleting payment:', error);
         setToast({ type: 'error', message: 'Có lỗi xảy ra khi xóa phiếu thu!' });
         setTimeout(() => setToast(null), 3000);
       }
@@ -286,12 +314,17 @@ const PaymentPage: React.FC = () => {
 
   const handlePay = async (id: string) => {
     setLoadingPay(true);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setPaymentRecords(records =>
-      records.map(r => r.id === id ? { ...r, status: 'Đã thanh toán' } : r)
-    );
-    setShowDetailModal(false);
-    setToast({ type: 'success', message: `Đã thanh toán phiếu thu ${id} thành công!` });
+    try {
+      await updatePaymentStatus(Number(id), 'completed');
+      setPaymentRecords(records =>
+        records.map(r => r.id === id ? { ...r, status: 'Đã thanh toán' } : r)
+      );
+      setShowDetailModal(false);
+      setToast({ type: 'success', message: `Đã thanh toán phiếu thu ${id} thành công!` });
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      setToast({ type: 'error', message: 'Có lỗi khi cập nhật trạng thái thanh toán!' });
+    }
     setLoadingPay(false);
   };
 

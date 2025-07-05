@@ -1,28 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DollarSign, User, MapPin, Phone, Mail, CalendarDays, BadgeDollarSign, ArrowLeft, Save, Building2 } from 'lucide-react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
-
-// Hàm lấy danh sách đại lý từ localStorage (hoặc mock nếu chưa có)
-const getAgencies = () => {
-  const data = localStorage.getItem('agencies');
-  if (data) return JSON.parse(data);
-  // Nếu chưa có, tạo 1 số đại lý mẫu
-  const defaultAgencies = [
-    { agency_id: 1, agency_name: 'Đại lý Hà Nội', phone_number: '0901234567', address: '123 Nguyễn Văn Linh, Q.7, TP.HCM', email: 'hanoi@example.com', representative: 'Nguyễn Văn A', debt_amount: 5000000 },
-    { agency_id: 2, agency_name: 'Đại lý Hồ Chí Minh', phone_number: '0902345678', address: '456 Lê Lợi, Q.1, TP.HCM', email: 'hcm@example.com', representative: 'Lê Thị B', debt_amount: 3500000 },
-    { agency_id: 3, agency_name: 'Đại lý Đà Nẵng', phone_number: '0903456789', address: '789 Trần Phú, Q.Hải Châu, TP.Đà Nẵng', email: 'danang@example.com', representative: 'Phạm Văn C', debt_amount: 2000000 }
-  ];
-  localStorage.setItem('agencies', JSON.stringify(defaultAgencies));
-  return defaultAgencies;
-};
+import { useAuth } from '../../hooks/useAuth';
+import { fetchAssignedAgencies } from '../../api/staffAgency.api';
+import type { AgencyInfo } from '../../api/staffAgency.api';
+import { createPayment } from '../../api/payment.api';
 
 const AddPaymentReceipt: React.FC = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedAgency, setSelectedAgency] = useState<any>(null);
-  const [agencies] = useState(getAgencies());
-
+  const [agencies, setAgencies] = useState<AgencyInfo[]>([]);
+  const [selectedAgency, setSelectedAgency] = useState<AgencyInfo | null>(null);
   const [formData, setFormData] = useState({
     agency_id: '',
     payment_date: '',
@@ -30,9 +20,19 @@ const AddPaymentReceipt: React.FC = () => {
     note: ''
   });
 
+  // Load danh sách agency staff quản lý
+  useEffect(() => {
+    const loadAgencies = async () => {
+      if (!user) return;
+      const list = await fetchAssignedAgencies(user.id);
+      setAgencies(list);
+    };
+    loadAgencies();
+  }, [user]);
+
   const handleAgencyChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const agencyId = parseInt(e.target.value);
-    const agency = agencies.find((a: any) => a.agency_id === agencyId);
+    const agency = agencies.find(a => a.agency_id === agencyId) || null;
     setSelectedAgency(agency);
     setFormData({ ...formData, agency_id: e.target.value });
   };
@@ -46,19 +46,12 @@ const AddPaymentReceipt: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Lấy danh sách payment hiện tại
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
-      const newPayment = {
-        payment_id: Date.now(),
-        ...formData,
+      // Gọi API tạo phiếu thu mới
+      await createPayment({
         agency_id: Number(formData.agency_id),
+        payment_date: formData.payment_date,
         amount_collected: Number(formData.amount_collected),
-        created_at: new Date().toISOString(),
-        user_id: 1,
-        user_name: 'Người dùng demo'
-      };
-      payments.push(newPayment);
-      localStorage.setItem('payments', JSON.stringify(payments));
+      });
       navigate('/payment');
     } catch (error) {
       console.error('Error submitting payment:', error);
@@ -115,7 +108,7 @@ const AddPaymentReceipt: React.FC = () => {
                     required
                   >
                     <option value="" className="text-gray-700">Chọn đại lý...</option>
-                    {agencies.map((agency: any) => (
+                    {agencies.map(agency => (
                       <option key={agency.agency_id} value={agency.agency_id} className="text-black">
                         {agency.agency_name} - Nợ: {agency.debt_amount.toLocaleString('vi-VN')} VND
                       </option>

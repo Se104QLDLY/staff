@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Edit, ArrowLeft } from 'lucide-react';
+import { getAgencyById, getAgencyTypes, getDistricts, updateAgency } from '../../api/agency.api';
 
 interface AgencyFormData {
   code: string;
@@ -17,6 +18,20 @@ interface AgencyFormData {
   manager: string;
   creditLimit: number;
   status: 'Hoạt động' | 'Tạm dừng' | 'Ngừng hợp tác';
+}
+
+interface AgencyType {
+  agency_type_id: number;
+  type_name: string;
+  max_debt: number;
+  description?: string;
+}
+
+interface District {
+  district_id: number;
+  district_name: string;
+  city_name: string;
+  max_agencies: number;
 }
 
 const schema = yup.object({
@@ -39,23 +54,19 @@ const schema = yup.object({
     .string()
     .required('Địa chỉ là bắt buộc')
     .min(10, 'Địa chỉ phải có ít nhất 10 ký tự'),
-  phone: yup
-    .string()
-    .required('Số điện thoại là bắt buộc')
-    .matches(/^0\d{9}$/, 'Số điện thoại phải có 10 chữ số và bắt đầu bằng 0'),
+  // Số điện thoại tùy chọn, không kiểm tra format
+  phone: yup.string(),
   email: yup
     .string()
     .required('Email là bắt buộc')
     .email('Email không hợp lệ'),
+  // Người quản lý tùy chọn, chỉ kiểm tra độ dài tối đa
   manager: yup
     .string()
-    .required('Người quản lý là bắt buộc')
     .max(50, 'Tên người quản lý không được vượt quá 50 ký tự'),
   creditLimit: yup
     .number()
-    .required('Hạn mức tín dụng là bắt buộc')
-    .min(1000000, 'Hạn mức tối thiểu là 1,000,000 VND')
-    .max(100000000, 'Hạn mức tối đa là 100,000,000 VND'),
+    .required('Hạn mức tín dụng là bắt buộc'),
   status: yup
     .string()
     .required('Trạng thái là bắt buộc')
@@ -70,49 +81,78 @@ const EditAgencyPage: React.FC = () => {
     register,
     handleSubmit,
     setValue,
+    watch,
+    reset,
     formState: { errors, isSubmitting },
   } = useForm<AgencyFormData>({
     resolver: yupResolver(schema) as any,
   });
 
-  // Mock data - trong thực tế sẽ fetch từ API
-  const existingAgency = {
-    id: id || '1',
-    code: 'DL001',
-    name: 'Đại lý Minh Anh',
-    typeId: 1,
-    district: 'Quận 1',
-    address: '123 Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP.HCM',
-    phone: '0901234567',
-    email: 'minhanh@email.com',
-    manager: 'Nguyễn Minh Anh',
-    creditLimit: 10000000,
-    status: 'Hoạt động' as const,
-  };
-
-  // Load existing data into form
+  // State for dynamic data
+  const [agencyTypes, setAgencyTypes] = useState<AgencyType[]>([]);
+  const [districts, setDistricts] = useState<District[]>([]);
+  
+  // Watch for changes in agency type
+  const selectedTypeId = watch('typeId');
+  
+  // Update credit limit when agency type changes
   useEffect(() => {
-    if (existingAgency) {
-      setValue('code', existingAgency.code);
-      setValue('name', existingAgency.name);
-      setValue('typeId', existingAgency.typeId);
-      setValue('district', existingAgency.district);
-      setValue('address', existingAgency.address);
-      setValue('phone', existingAgency.phone);
-      setValue('email', existingAgency.email);
-      setValue('manager', existingAgency.manager || '');
-      setValue('creditLimit', existingAgency.creditLimit);
-      setValue('status', existingAgency.status);
+    if (selectedTypeId && agencyTypes.length > 0) {
+      const selectedType = agencyTypes.find(type => type.agency_type_id === selectedTypeId);
+      if (selectedType) {
+        setValue('creditLimit', selectedType.max_debt);
+      }
     }
-  }, [setValue]);
+  }, [selectedTypeId, agencyTypes, setValue]);
+
+  // Fetch agency details, types, and districts from API
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Load agency details, types and districts in parallel
+        const [agencyData, types, districtsData] = await Promise.all([
+          getAgencyById(Number(id)),
+          getAgencyTypes(),
+          getDistricts(),
+        ]);
+        // Populate selects
+        setAgencyTypes(types);
+        setDistricts(districtsData);
+        // Prefill form after options are ready
+        reset({
+          code: agencyData.code,
+          name: agencyData.name,
+          typeId: agencyData.type_id,
+          district: agencyData.district,
+          address: agencyData.address,
+          phone: agencyData.phone,
+          email: agencyData.email,
+          manager: agencyData.representative || '',
+          creditLimit: agencyData.debt_limit,
+          status: agencyData.is_active ? 'Hoạt động' : 'Ngừng hợp tác',
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchData();
+  }, [id, reset]);
 
   const onSubmit: (data: AgencyFormData) => Promise<void> = async (data) => {
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Updated agency data:', data);
+      // Find the selected district ID
+      const selectedDistrict = districts.find(d => d.district_name === data.district);
       
-      // Show success message and redirect
+      await updateAgency(Number(id), {
+        name: data.name,
+        phone: data.phone,
+        address: data.address,
+        email: data.email,
+        type_id: data.typeId,
+        district_id: selectedDistrict?.district_id,
+        representative: data.manager || null,
+        // Note: debt_limit is not sent as it's determined by agency type
+      });
       alert('Đại lý đã được cập nhật thành công!');
       navigate('/agencies');
     } catch (error) {
@@ -120,18 +160,6 @@ const EditAgencyPage: React.FC = () => {
       alert('Có lỗi xảy ra khi cập nhật đại lý!');
     }
   };
-
-  const agencyTypes = [
-    { id: 1, name: 'Cấp 1' },
-    { id: 2, name: 'Cấp 2' },
-    { id: 3, name: 'Cấp 3' }
-  ];
-
-  const districts = [
-    'Quận 1', 'Quận 2', 'Quận 3', 'Quận 4', 'Quận 5', 'Quận 6', 'Quận 7', 'Quận 8', 'Quận 9', 'Quận 10',
-    'Quận 11', 'Quận 12', 'Quận Bình Thạnh', 'Quận Gò Vấp', 'Quận Phú Nhuận', 'Quận Tân Bình',
-    'Quận Tân Phú', 'Quận Thủ Đức', 'Huyện Bình Chánh', 'Huyện Cần Giờ', 'Huyện Củ Chi', 'Huyện Hóc Môn', 'Huyện Nhà Bè'
-  ];
 
   return (
     <DashboardLayout>
@@ -144,7 +172,7 @@ const EditAgencyPage: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-2xl md:text-3xl font-extrabold text-blue-800 drop-shadow uppercase tracking-wide">Chỉnh sửa đại lý</h1>
-                <p className="text-blue-600 text-base mt-1">Cập nhật thông tin đại lý {existingAgency.code}</p>
+                <p className="text-blue-600 text-base mt-1">Cập nhật thông tin đại lý {id}</p>
               </div>
             </div>
             <Link to="/agencies" className="flex items-center gap-2 px-4 py-2 bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition-colors font-semibold shadow-md">
@@ -179,7 +207,9 @@ const EditAgencyPage: React.FC = () => {
               >
                 <option value="">Chọn loại đại lý</option>
                 {agencyTypes.map((type) => (
-                  <option key={type.id} value={type.id}>{type.name}</option>
+                  <option key={type.agency_type_id} value={type.agency_type_id}>
+                    {type.type_name}
+                  </option>
                 ))}
               </select>
               {errors.typeId && (
@@ -212,8 +242,10 @@ const EditAgencyPage: React.FC = () => {
                 className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
               >
                 <option value="">Chọn quận/huyện</option>
-                {districts.map((district) => (
-                  <option key={district} value={district}>{district}</option>
+                {districts.map((d) => (
+                  <option key={d.district_id} value={d.district_name}>
+                    {d.district_name}
+                  </option>
                 ))}
               </select>
               {errors.district && (
@@ -255,7 +287,7 @@ const EditAgencyPage: React.FC = () => {
             {/* Số điện thoại */}
             <div className="lg:col-span-1">
               <label className="block text-blue-700 font-semibold mb-2">
-                Số điện thoại <span className="text-red-500">*</span>
+                Số điện thoại
               </label>
               <input
                 {...register('phone')}
@@ -286,19 +318,18 @@ const EditAgencyPage: React.FC = () => {
             {/* Hạn mức tín dụng */}
             <div className="lg:col-span-1">
               <label className="block text-blue-700 font-semibold mb-2">
-                Hạn mức tín dụng (VND) <span className="text-red-500">*</span>
+                Hạn mức tín dụng (VND) <span className="text-gray-500">(Tự động theo loại đại lý)</span>
               </label>
               <input
                 type="number"
                 {...register('creditLimit')}
                 placeholder="10000000"
-                min="1000000"
-                max="100000000"
-                className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg shadow-sm"
+                readOnly
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50 text-gray-700 text-lg shadow-sm cursor-not-allowed"
               />
-              {errors.creditLimit && (
-                <span className="text-red-500 text-sm mt-1">{errors.creditLimit.message}</span>
-              )}
+              <p className="text-xs text-gray-500 mt-1">
+                Hạn mức được xác định bởi loại đại lý và không thể thay đổi trực tiếp
+              </p>
             </div>
 
             {/* Trạng thái */}

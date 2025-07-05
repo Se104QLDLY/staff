@@ -1,5 +1,6 @@
-import React, { useState, ReactNode, MouseEventHandler } from 'react';
-// In a real app, you would use: import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, ReactNode, MouseEventHandler } from 'react';
+import { useParams } from 'react-router-dom';
+import { getAgencyById } from '../../api/agency.api';
 // In a real app, you would use: import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Users, BadgeCheck, AlertCircle, Edit, ArrowLeft, Info, Phone, Mail, Building, MapPin, User, Calendar, Clock, DollarSign, List, Settings, Trash2, ShieldAlert } from 'lucide-react';
 
@@ -114,32 +115,16 @@ const TabButton = ({ label, icon, isActive, onClick }: TabButtonProps) => (
 // --- ViewAgencyPage Component ---
 
 const ViewAgencyPage = () => {
-    const id = '1'; // Mocking the id for preview
+    const { id } = useParams<{ id: string }>();
     const [activeTab, setActiveTab] = useState('overview');
-
-    // Mock data - expanded with debt history
-    const agency: Agency = {
-        id: id || '1',
-        code: 'DL001',
-        name: 'Đại lý Minh Anh',
-        type: { id: 1, name: 'Cấp 1' },
-        district: 'Quận 1',
-        address: '123 Nguyễn Huệ, P. Bến Nghé, Q.1, TP.HCM',
-        phone: '0901234567',
-        email: 'minhanh@email.com',
-        manager: 'Nguyễn Minh Anh',
-        debt: 2500000,
-        creditLimit: 10000000,
-        status: 'Hoạt động',
-        createdDate: '2024-01-15T10:30:00Z',
-        updatedDate: '2024-06-20T14:00:00Z',
-        debtHistory: [
-            { date: '2024-06-18', description: 'Thanh toán đơn hàng #5821', amount: -5000000, balance: 2500000 },
-            { date: '2024-06-15', description: 'Ghi nợ đơn hàng #5810', amount: 7500000, balance: 7500000 },
-            { date: '2024-06-05', description: 'Thanh toán đơn hàng #5799', amount: -3000000, balance: 0 },
-            { date: '2024-06-01', description: 'Ghi nợ đơn hàng #5790', amount: 3000000, balance: 3000000 },
-        ]
-    };
+    const [agencyData, setAgencyData] = useState<Agency | null>(null);
+    useEffect(() => {
+      getAgencyById(Number(id)).then(data => setAgencyData(data)).catch(console.error);
+    }, [id]);
+    if (!agencyData) return <div>Loading...</div>;
+    
+    // Real agency data
+    const agency: Agency = agencyData;
     
     const debtPercentage = ((agency.debt || 0) / (agency.creditLimit || 1)) * 100;
     const getProgressBarColor = () => {

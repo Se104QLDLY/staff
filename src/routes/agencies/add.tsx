@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useNavigate } from 'react-router-dom';
+import { getAgencyTypes, getDistricts, createAgency } from '../../api/agency.api';
 
 // =================================================================================
 // MOCK DEPENDENCIES & HELPERS (For standalone running)
@@ -31,31 +32,6 @@ const Spinner = ({ className }) => <Icon className={className}><svg xmlns="http:
 // =================================================================================
 // DATA SETUP (For standalone running, based on your DB Schema)
 // =================================================================================
-const setupMockData = () => {
-    if (!localStorage.getItem('agency_types')) {
-        const mockAgencyTypes = [
-            { agency_type_id: 1, type_name: 'Đại lý Cấp 1', max_debt: 100000000 },
-            { agency_type_id: 2, type_name: 'Đại lý Cấp 2', max_debt: 50000000 },
-            { agency_type_id: 3, type_name: 'Nhà Phân Phối', max_debt: 500000000 },
-        ];
-        localStorage.setItem('agency_types', JSON.stringify(mockAgencyTypes));
-    }
-    if (!localStorage.getItem('districts')) {
-        const mockDistricts = [
-            { district_id: 1, district_name: 'Quận 1', max_agencies: 4 },
-            { district_id: 2, district_name: 'Quận 3', max_agencies: 4 },
-            { district_id: 3, district_name: 'Quận Gò Vấp', max_agencies: 4 },
-            { district_id: 4, district_name: 'Thành phố Thủ Đức', max_agencies: 4 },
-        ];
-        localStorage.setItem('districts', JSON.stringify(mockDistricts));
-    }
-     if (!localStorage.getItem('agencies_list')) {
-        localStorage.setItem('agencies_list', JSON.stringify([]));
-    }
-};
-
-const getAgencyTypes = () => JSON.parse(localStorage.getItem('agency_types') || '[]');
-const getDistricts = () => JSON.parse(localStorage.getItem('districts') || '[]');
 
 // =================================================================================
 // FORM VALIDATION SCHEMA (Based on agency.agency table)
@@ -108,25 +84,26 @@ const AddAgencyPage = () => {
   });
 
   useEffect(() => {
-    setupMockData();
-    setAgencyTypes(getAgencyTypes());
-    setDistricts(getDistricts());
+    getAgencyTypes()
+      .then(data => setAgencyTypes(data))
+      .catch(console.error);
+    getDistricts()
+      .then(data => setDistricts(data))
+      .catch(console.error);
   }, []);
 
   const onSubmit = async (data) => {
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      const agenciesList = JSON.parse(localStorage.getItem('agencies_list') || '[]');
-      const newAgency = {
-          agency_id: Date.now(), // Simple unique ID
-          ...data,
-          debt_amount: 0, // Default debt
-          created_at: new Date().toISOString(),
-      };
-      agenciesList.push(newAgency);
-      localStorage.setItem('agencies_list', JSON.stringify(agenciesList));
-
-      console.log('Agency data to be saved:', newAgency);
+      await createAgency({
+        agency_name: data.agency_name,
+        phone_number: data.phone_number,
+        address: data.address,
+        email: data.email,
+        agency_type_id: data.agency_type_id,
+        district_id: data.district_id,
+        representative: data.representative,
+        reception_date: data.reception_date,
+      });
       alert('Thêm đại lý mới thành công!');
       navigate('/agencies');
     } catch (error) {

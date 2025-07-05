@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart, FileText, FileSpreadsheet, FilePlus2, Users, TrendingUp, TrendingDown, CheckCircle, AlertCircle, Clock, User, Eye } from 'lucide-react';
+import { BarChart, FileText, FileSpreadsheet, FilePlus2, Users, TrendingUp, TrendingDown, CheckCircle, AlertCircle, Clock, User, Eye, Loader2 } from 'lucide-react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout/DashboardLayout';
+import { useAuth } from '../../hooks/useAuth';
+import { fetchAssignedAgencies, type AgencyInfo } from '../../api/staffAgency.api';
+import { getSalesReport, getDebtReport, type SalesReportItem, type DebtReportData } from '../../api/report.api';
 
 interface Report {
   id: string;
@@ -16,44 +19,99 @@ interface Report {
   amount?: number;
 }
 
-const reports: Report[] = [
-  {
-    id: 'BC001',
-    title: 'Báo cáo doanh thu tháng 1/2024',
-    type: 'Doanh thu',
-    period: 'Tháng 1/2024',
-    status: 'Hoàn thành',
-    creator: 'Nguyễn Văn A',
-    createdDate: '15/01/2024',
-    updatedDate: '15/01/2024',
-    description: 'Báo cáo tổng hợp doanh thu tháng 1/2024',
-    amount: 1250000000
-  },
-  {
-    id: 'BC002',
-    title: 'Báo cáo công nợ quý 1/2024',
-    type: 'Công nợ',
-    period: 'Quý 1/2024',
-    status: 'Đang xử lý',
-    creator: 'Trần Thị B',
-    createdDate: '14/01/2024',
-    updatedDate: '14/01/2024',
-    description: 'Báo cáo công nợ quý 1/2024',
-    amount: 458000000
-  },
-  {
-    id: 'BC003',
-    title: 'Báo cáo tồn kho tháng 1/2024',
-    type: 'Tồn kho',
-    period: 'Tháng 1/2024',
-    status: 'Hoàn thành',
-    creator: 'Lê Văn C',
-    createdDate: '13/01/2024',
-    updatedDate: '13/01/2024',
-    description: 'Báo cáo tồn kho tháng 1/2024',
-    amount: 890000000
-  }
-];
+const useStaffReports = () => {
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [reports, setReports] = useState<Report[]>([]);
+  const [topRevenue, setTopRevenue] = useState<{ id: string; name: string; revenue: number }[]>([]);
+  const [topDebt, setTopDebt] = useState<{ id: string; name: string; debt: number }[]>([]);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        if (!user) return;
+        // Lấy danh sách đại lý nhân viên quản lý
+        const agencies: AgencyInfo[] = await fetchAssignedAgencies(user.id);
+        if (!agencies.length) {
+          setError('Bạn chưa được phân công quản lý đại lý nào.');
+          setLoading(false);
+          return;
+        }
+
+        const today = new Date();
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(today.getMonth() - 6);
+
+        // Fetch song song doanh số và công nợ cho từng đại lý
+        const salesPromises = agencies.map(a => getSalesReport({ agency_id: a.agency_id, from: sixMonthsAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] }));
+        const debtPromises = agencies.map(a => getDebtReport({ agency_id: a.agency_id }));
+
+        const [salesResults, debtResults] = await Promise.all([
+          Promise.all(salesPromises),
+          Promise.all(debtPromises)
+        ]);
+
+        // Tính tổng doanh thu 6 tháng / công nợ hiện tại cho từng đại lý
+        const generatedReports: Report[] = [];
+        const topRev: { id: string; name: string; revenue: number }[] = [];
+        const topDeb: { id: string; name: string; debt: number }[] = [];
+
+        agencies.forEach((agency, idx) => {
+          const salesData: SalesReportItem[] = salesResults[idx];
+          const debtData: DebtReportData = debtResults[idx];
+
+          const totalRevenue = salesData.reduce((sum, s) => sum + Number(s.total_revenue), 0);
+          const totalDebt = Number(debtData.total_debt ?? 0);
+
+          generatedReports.push({
+            id: `REV-${agency.agency_id}`,
+            title: `Báo cáo doanh thu 6 tháng - ${agency.agency_name}`,
+            type: 'Doanh thu',
+            period: '6 tháng',
+            status: 'Hoàn thành',
+            creator: user.full_name || 'Hệ thống',
+            createdDate: today.toLocaleDateString('vi-VN'),
+            updatedDate: today.toLocaleDateString('vi-VN'),
+            amount: totalRevenue
+          });
+
+          generatedReports.push({
+            id: `DEBT-${agency.agency_id}`,
+            title: `Báo cáo công nợ - ${agency.agency_name}`,
+            type: 'Công nợ',
+            period: today.toLocaleDateString('vi-VN'),
+            status: 'Hoàn thành',
+            creator: user.full_name || 'Hệ thống',
+            createdDate: today.toLocaleDateString('vi-VN'),
+            updatedDate: today.toLocaleDateString('vi-VN'),
+            amount: totalDebt
+          });
+
+          topRev.push({ id: `DL${agency.agency_id}`, name: agency.agency_name, revenue: totalRevenue });
+          topDeb.push({ id: `DL${agency.agency_id}`, name: agency.agency_name, debt: totalDebt });
+        });
+
+        // Sắp xếp top lists
+        topRev.sort((a, b) => b.revenue - a.revenue);
+        topDeb.sort((a, b) => b.debt - a.debt);
+
+        setReports(generatedReports);
+        setTopRevenue(topRev.slice(0, 5));
+        setTopDebt(topDeb.slice(0, 5));
+      } catch (err) {
+        console.error('Fetch staff reports error', err);
+        setError('Không thể tải dữ liệu báo cáo.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchReports();
+  }, [user]);
+
+  return { reports, topRevenue, topDebt, loading, error };
+};
 
 const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN').format(amount) + ' VND';
 
@@ -86,6 +144,29 @@ const getStatusBadge = (status: string) => {
 };
 
 const StaffReportsPage: React.FC = () => {
+  const { reports, topRevenue, topDebt, loading, error } = useStaffReports();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+        <Loader2 className="h-16 w-16 text-blue-600 animate-spin" />
+        <p className="ml-4 text-xl text-gray-700">Đang tải dữ liệu báo cáo...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-center">
+        <div>
+          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
+          <h1 className="text-2xl font-bold text-red-600">Đã xảy ra lỗi</h1>
+          <p className="text-gray-600 mt-2">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <DashboardLayout>
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
@@ -195,13 +276,7 @@ const StaffReportsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { id: 'DL101', name: 'Đại lý 1', revenue: 45000000 },
-                    { id: 'DL102', name: 'Đại lý 2', revenue: 40000000 },
-                    { id: 'DL103', name: 'Đại lý 3', revenue: 35000000 },
-                    { id: 'DL104', name: 'Đại lý 4', revenue: 30000000 },
-                    { id: 'DL105', name: 'Đại lý 5', revenue: 25000000 }
-                  ].map((agency) => (
+                  {topRevenue.map((agency) => (
                     <tr key={agency.id} className="border-b last:border-0">
                       <td className="py-2 px-4 font-bold text-blue-900 whitespace-nowrap">{agency.id}</td>
                       <td className="py-2 px-4 text-gray-800 whitespace-nowrap">{agency.name}</td>
@@ -212,48 +287,7 @@ const StaffReportsPage: React.FC = () => {
               </table>
             </div>
           </div>
-          {/* Biểu đồ doanh số theo thời gian */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-blue-100 flex flex-col items-center justify-center">
-            <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2"><BarChart className="h-5 w-5 text-blue-600"/>Biểu đồ doanh số theo thời gian</h3>
-            <svg viewBox="0 0 420 290" width="100%" height="290" className="mx-auto">
-              {/* Legend */}
-              <rect x="60" y="20" width="18" height="12" fill="#60a5fa" />
-              <text x="85" y="30" fontSize="14" fill="#2563eb" fontWeight="bold">Doanh số (Triệu VND)</text>
-              {/* Title */}
-              <text x="210" y="55" textAnchor="middle" fontSize="18" fill="#334155" fontWeight="bold">Biểu đồ doanh số theo thời gian</text>
-              {/* Grid lines */}
-              {[0, 1, 2, 3, 4].map(i => (
-                <line key={i} x1="50" x2="380" y1={80 + i*36} y2={80 + i*36} stroke="#e5e7eb" strokeWidth="1" />
-              ))}
-              {/* Y axis */}
-              <line x1="50" y1="80" x2="50" y2="224" stroke="#94a3b8" strokeWidth="2" />
-              {/* X axis */}
-              <line x1="50" y1="224" x2="380" y2="224" stroke="#94a3b8" strokeWidth="2" />
-              {/* Bars: Doanh số */}
-              {[
-                { x: 80, height: 100, value: 100 },
-                { x: 150, height: 70, value: 150 },
-                { x: 220, height: 40, value: 180 },
-                { x: 290, height: 20, value: 200 }
-              ].map((bar, idx) => (
-                <g key={bar.x}>
-                  <rect x={bar.x} y={bar.height+80} width="40" height={144-bar.height} rx="6" fill="#60a5fa" />
-                  {/* Value on top */}
-                  <text x={bar.x+20} y={bar.height+70} textAnchor="middle" fontSize="15" fill="#2563eb" fontWeight="bold">{bar.value}</text>
-                  {/* Month label: 5/2024, 6/2024, ... */}
-                  <text x={bar.x+20} y={244} textAnchor="middle" fontSize="15" fill="#64748b">{"5/2024,6/2024,7/2024,8/2024".split(",")[idx]}</text>
-                </g>
-              ))}
-              {/* Đơn vị trục hoành căn giữa */}
-              <text x="210" y="285" textAnchor="middle" fontSize="13" fill="#64748b" fontWeight="bold">Tháng</text>
-              {/* Đơn vị trục tung sát trục, trên cùng */}
-              <text x="45" y="65" textAnchor="end" fontSize="13" fill="#64748b" fontWeight="bold">Triệu VND</text>
-              {/* Y labels */}
-              {[0, 50, 100, 150, 200].map((v, i) => (
-                <text key={v} x="40" y={224-36*i+5} textAnchor="end" fontSize="13" fill="#64748b">{v}</text>
-              ))}
-            </svg>
-          </div>
+          {/* Biểu đồ doanh số theo thời gian – đã lược bỏ */}
           {/* Hàng 2: Công nợ */}
           <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-blue-100">
             <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2"><TrendingDown className="h-5 w-5 text-red-600"/>Danh sách đại lý có công nợ cao nhất</h3>
@@ -267,13 +301,7 @@ const StaffReportsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {[
-                    { id: 'DL101', name: 'Đại lý 1', debt: 45000000 },
-                    { id: 'DL102', name: 'Đại lý 2', debt: 40000000 },
-                    { id: 'DL103', name: 'Đại lý 3', debt: 35000000 },
-                    { id: 'DL104', name: 'Đại lý 4', debt: 30000000 },
-                    { id: 'DL105', name: 'Đại lý 5', debt: 25000000 }
-                  ].map((agency) => (
+                  {topDebt.map((agency) => (
                     <tr key={agency.id} className="border-b last:border-0">
                       <td className="py-2 px-4 font-bold text-blue-900 whitespace-nowrap">{agency.id}</td>
                       <td className="py-2 px-4 text-gray-800 whitespace-nowrap">{agency.name}</td>
@@ -284,48 +312,7 @@ const StaffReportsPage: React.FC = () => {
               </table>
             </div>
           </div>
-          {/* Biểu đồ công nợ theo thời gian */}
-          <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-blue-100 flex flex-col items-center justify-center">
-            <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2"><BarChart className="h-5 w-5 text-red-600"/>Biểu đồ công nợ theo thời gian</h3>
-            <svg viewBox="0 0 420 290" width="100%" height="290" className="mx-auto">
-              {/* Legend */}
-              <rect x="60" y="20" width="18" height="12" fill="#fb7185" />
-              <text x="85" y="30" fontSize="14" fill="#be123c" fontWeight="bold">Công nợ (Triệu VND)</text>
-              {/* Title */}
-              <text x="210" y="55" textAnchor="middle" fontSize="18" fill="#334155" fontWeight="bold">Biểu đồ công nợ theo thời gian</text>
-              {/* Grid lines */}
-              {[0, 1, 2, 3, 4].map(i => (
-                <line key={i} x1="50" x2="380" y1={80 + i*36} y2={80 + i*36} stroke="#e5e7eb" strokeWidth="1" />
-              ))}
-              {/* Y axis */}
-              <line x1="50" y1="80" x2="50" y2="224" stroke="#94a3b8" strokeWidth="2" />
-              {/* X axis */}
-              <line x1="50" y1="224" x2="380" y2="224" stroke="#94a3b8" strokeWidth="2" />
-              {/* Bars: Công nợ */}
-              {[
-                { x: 80, height: 120, value: 80 },
-                { x: 150, height: 90, value: 120 },
-                { x: 220, height: 60, value: 150 },
-                { x: 290, height: 40, value: 180 }
-              ].map((bar, idx) => (
-                <g key={bar.x}>
-                  <rect x={bar.x} y={bar.height+80} width="40" height={144-bar.height} rx="6" fill="#fb7185" />
-                  {/* Value on top */}
-                  <text x={bar.x+20} y={bar.height+70} textAnchor="middle" fontSize="15" fill="#be123c" fontWeight="bold">{bar.value}</text>
-                  {/* Month label: 5/2024, 6/2024, ... */}
-                  <text x={bar.x+20} y={244} textAnchor="middle" fontSize="15" fill="#64748b">{"5/2024,6/2024,7/2024,8/2024".split(",")[idx]}</text>
-                </g>
-              ))}
-              {/* Đơn vị trục hoành căn giữa */}
-              <text x="210" y="285" textAnchor="middle" fontSize="13" fill="#64748b" fontWeight="bold">Tháng</text>
-              {/* Đơn vị trục tung sát trục, trên cùng */}
-              <text x="45" y="65" textAnchor="end" fontSize="13" fill="#64748b" fontWeight="bold">Triệu VND</text>
-              {/* Y labels */}
-              {[0, 50, 100, 150, 200].map((v, i) => (
-                <text key={v} x="40" y={224-36*i+5} textAnchor="end" fontSize="13" fill="#64748b">{v}</text>
-              ))}
-            </svg>
-          </div>
+          {/* Biểu đồ công nợ theo thời gian – đã lược bỏ */}
         </div>
       </div>
     </DashboardLayout>

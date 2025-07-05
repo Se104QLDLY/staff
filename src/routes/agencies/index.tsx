@@ -1,17 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Users, Search, Edit, Eye, BadgeCheck, Info } from 'lucide-react';
-
-const mockAgencies = [
-  { id: '1', name: 'Đại lý Minh Anh', code: 'DL001', address: '123 Nguyễn Văn Linh, Q.7, TP.HCM', phone: '0901234567', email: 'minhanh@example.com', approved: true },
-  { id: '2', name: 'Đại lý Thành Công', code: 'DL002', address: '456 Lê Lợi, Q.1, TP.HCM', phone: '0902345678', email: 'thanhcong@example.com', approved: true },
-  { id: '3', name: 'Đại lý Hồng Phúc', code: 'DL003', address: '789 Trần Hưng Đạo, Q.5, TP.HCM', phone: '0903456789', email: 'hongphuc@example.com', approved: false },
-];
+import { getAgencies } from '../../api/agency.api';
+import { useAuth } from '../../hooks/useAuth';
+import axios from 'axios';
 
 const AgencyPage: React.FC = () => {
-  const [agencies] = useState(mockAgencies);
+  const [agencies, setAgencies] = useState<any[]>([]);
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    const loadAgencies = async () => {
+      try {
+        if (!user) return;
+
+        // Fetch assigned agencies using a direct axios call to avoid baseURL conflict
+        const assignedRes = await axios.get('/api/v1/staff-agency/by_staff/', {
+          params: { staff_id: user.id },
+          withCredentials: true,
+        });
+        const assignedIds = assignedRes.data.agencies.map((a: any) => a.id);
+        
+        // Fetch all agencies and filter
+        const data = await getAgencies();
+        const filtered = data.results.filter((a: any) => assignedIds.includes(a.id));
+        setAgencies(filtered);
+      } catch (error) {
+        console.error('Error loading agencies:', error);
+      }
+    };
+    loadAgencies();
+  }, [user]);
 
   // Lọc danh sách theo từ khóa
   const filteredAgencies = agencies.filter(a =>
@@ -24,8 +45,6 @@ const AgencyPage: React.FC = () => {
 
   // Thống kê
   const total = agencies.length;
-  const approved = agencies.filter(a => a.approved).length;
-  const notApproved = total - approved;
 
   return (
     <DashboardLayout>
@@ -51,21 +70,11 @@ const AgencyPage: React.FC = () => {
           </div>
 
           {/* Thống kê */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-1 gap-6 mb-8">
             <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl shadow-lg p-6 border-2 border-blue-100 flex flex-col items-center">
               <Users className="h-8 w-8 text-blue-600 mb-2" />
               <div className="text-gray-700 font-semibold mb-1">Tổng số đại lý</div>
               <div className="text-2xl font-extrabold text-blue-700">{total}</div>
-            </div>
-            <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-lg p-6 border-2 border-green-100 flex flex-col items-center">
-              <BadgeCheck className="h-8 w-8 text-green-600 mb-2" />
-              <div className="text-gray-700 font-semibold mb-1">Đã duyệt</div>
-              <div className="text-2xl font-extrabold text-green-700">{approved}</div>
-            </div>
-            <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl shadow-lg p-6 border-2 border-red-100 flex flex-col items-center">
-              <Info className="h-8 w-8 text-red-600 mb-2" />
-              <div className="text-gray-700 font-semibold mb-1">Chưa duyệt</div>
-              <div className="text-2xl font-extrabold text-red-600">{notApproved}</div>
             </div>
           </div>
 
@@ -94,7 +103,6 @@ const AgencyPage: React.FC = () => {
                   <th className="py-3 px-4 text-left">Địa chỉ</th>
                   <th className="py-3 px-4 text-left">Số điện thoại</th>
                   <th className="py-3 px-4 text-left">Email</th>
-                  <th className="py-3 px-4 text-left">Trạng thái</th>
                   <th className="py-3 px-4 text-left">Thao tác</th>
                 </tr>
               </thead>
@@ -111,13 +119,6 @@ const AgencyPage: React.FC = () => {
                     <td className="px-4 py-3 text-gray-800">{agency.address}</td>
                     <td className="px-4 py-3 text-gray-800">{agency.phone}</td>
                     <td className="px-4 py-3 text-gray-800">{agency.email}</td>
-                    <td className="px-4 py-3">
-                      {agency.approved ? (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full"><BadgeCheck className="h-4 w-4"/>Đã duyệt</span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 px-3 py-1 bg-orange-100 text-orange-800 text-xs font-semibold rounded-full"><Info className="h-4 w-4"/>Chưa duyệt</span>
-                      )}
-                    </td>
                     <td className="px-4 py-3 flex gap-2">
                       <Link to={`/agencies/view/${agency.id}`} className="p-2 rounded-full bg-blue-50 hover:bg-blue-200 text-blue-600 hover:text-blue-900 transition-colors" title="Xem">
                         <Eye className="h-5 w-5" />

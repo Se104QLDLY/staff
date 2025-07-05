@@ -1,10 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Loading } from '../../components/common';
 import { Truck, ListChecks, DollarSign, BadgeCheck, BadgeAlert, Trash2, PlusCircle } from 'lucide-react';
+import { getIssues, deleteIssue, updateIssue, updateIssueStatus, getIssueById, getItemById } from '../../api/export.api';
+import { useAuth } from '../../hooks/useAuth';
+import { fetchAssignedAgencies } from '../../api/staffAgency.api';
 
 interface ExportItem {
+  id: number;
   code: string;
   agency: string;
   exportDate: string;
@@ -16,6 +20,7 @@ interface ExportItem {
 }
 
 interface ExportRequest {
+  id: number;
   code: string;
   agency: string;
   exportDate: string;
@@ -24,6 +29,7 @@ interface ExportRequest {
 }
 
 const ExportPage: React.FC = () => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgency, setSelectedAgency] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
@@ -32,54 +38,14 @@ const ExportPage: React.FC = () => {
   const [itemToDelete, setItemToDelete] = useState<ExportItem | null>(null);
   const [showRequestModal, setShowRequestModal] = useState(false);
 
-  const [exportItems, setExportItems] = useState<ExportItem[]>([
-    {
-      code: 'PX001',
-      agency: 'Đại lý A',
-      exportDate: '2024-01-15',
-      totalAmount: 18500000,
-      creator: 'Nguyễn Văn A',
-      createdDate: '2024-01-15',
-      updatedDate: '2024-01-15',
-      status: 'pending', // Chưa xác nhận
-    },
-    {
-      code: 'PX002',
-      agency: 'Đại lý B',
-      exportDate: '2024-01-14',
-      totalAmount: 25700000,
-      creator: 'Trần Thị B',
-      createdDate: '2024-01-14',
-      updatedDate: '2024-01-14',
-      status: 'confirmed', // Đã xác nhận
-    },
-  ]);
+  const [exportItems, setExportItems] = useState<ExportItem[]>([]);
 
-  // Danh sách yêu cầu xuất hàng (pending)
-  const [exportRequests, setExportRequests] = useState<ExportRequest[]>([
-    {
-      code: 'YEUCAU001',
-      agency: 'Đại lý C',
-      exportDate: '2024-01-20',
-      totalAmount: 9900000,
-      creator: 'Nguyễn Văn C',
-    },
-    {
-      code: 'YEUCAU002',
-      agency: 'Đại lý D',
-      exportDate: '2024-01-21',
-      totalAmount: 12300000,
-      creator: 'Trần Thị D',
-    },
-  ]);
+  const [exportRequests, setExportRequests] = useState<ExportRequest[]>([]);
 
-  // Danh sách yêu cầu đã xác nhận nhưng chưa lập phiếu xuất
   const [confirmedRequests, setConfirmedRequests] = useState<ExportRequest[]>([]);
 
-  // State lưu trạng thái kiểm tra tồn kho cho từng yêu cầu
   const [stockCheck, setStockCheck] = useState<Record<string, 'not_checked' | 'in_stock' | 'out_of_stock' | 'checking'>>({});
 
-  // State lưu chi tiết tồn kho cho từng yêu cầu
   const [stockDetails, setStockDetails] = useState<Record<string, {
     items: Array<{
       name: string;
@@ -89,6 +55,60 @@ const ExportPage: React.FC = () => {
     }>;
     overallStatus: 'sufficient' | 'insufficient';
   }>>({});
+
+  useEffect(() => {
+    const loadIssues = async () => {
+      if (!user) return;
+      // Xác định danh sách agency staff được phân công
+      let agencyIds: number[] = [];
+      if ((user as any).agency_id) {
+        agencyIds = [(user as any).agency_id];
+      } else {
+        const assigned = await fetchAssignedAgencies(user.id);
+        agencyIds = assigned.map(a => a.agency_id);
+      }
+      try {
+        const data = await getIssues();
+        // Lọc các issue từ các agency đã phân công: chỉ processing và confirmed
+        const pendingIssues = data.results.filter(issue =>
+          agencyIds.includes(issue.agency_id) && issue.status === 'processing'
+        );
+        const confirmedIssues = data.results.filter(issue =>
+          agencyIds.includes(issue.agency_id) && issue.status === 'confirmed'
+        );
+        // Map sang frontend shape
+        const mappedPending = pendingIssues.map(issue => ({
+          id: issue.issue_id,
+          code: `PX${issue.issue_id.toString().padStart(3, '0')}`,
+          agency: issue.agency_name,
+          exportDate: issue.issue_date,
+          totalAmount: Number(issue.total_amount),
+          creator: issue.user_name,
+          createdDate: issue.created_at,
+          updatedDate: issue.updated_at || issue.created_at,
+          status: 'pending' as const,
+        }));
+        const mappedConfirmed = confirmedIssues.map(issue => ({
+          id: issue.issue_id,
+          code: `PX${issue.issue_id.toString().padStart(3, '0')}`,
+          agency: issue.agency_name,
+          exportDate: issue.issue_date,
+          totalAmount: Number(issue.total_amount),
+          creator: issue.user_name,
+          createdDate: issue.created_at,
+          updatedDate: issue.updated_at || issue.created_at,
+          status: 'confirmed' as const,
+        }));
+        setExportItems(mappedConfirmed);
+        setExportRequests(mappedPending);
+        // Hiển thị các phiếu xuất đã confirmed cho staff được ủy quyền
+        setConfirmedRequests(mappedConfirmed);
+      } catch (error) {
+        console.error('Error loading export page data:', error);
+      }
+    };
+    loadIssues();
+  }, [user]);
 
   // Filter logic
   const filteredItems = exportItems.filter(item => {
@@ -124,11 +144,9 @@ const ExportPage: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (itemToDelete) {
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await deleteIssue(itemToDelete.id);
         
-        // Remove from local state
-        setExportItems(exportItems.filter(item => item.code !== itemToDelete.code));
+        setExportItems(exportItems.filter(item => item.id !== itemToDelete.id));
         
         // Close modal and reset
         setShowDeleteModal(false);
@@ -148,25 +166,40 @@ const ExportPage: React.FC = () => {
   };
 
   // Khi xác nhận yêu cầu xuất hàng
-  const handleConfirmRequest = (code: string) => {
-    const stockDetail = stockDetails[code];
-    if (stockDetail && stockDetail.overallStatus === 'sufficient') {
-      const req = exportRequests.find(r => r.code === code);
+  const handleConfirmRequest = async (id: number) => {
+    try {
+      // Update status to 'confirmed' on server
+      await updateIssueStatus(id, 'confirmed', 'Đã xác nhận xuất hàng bởi nhân viên');
+      
+      // Move from pending to confirmed list
+      const req = exportRequests.find(r => r.id === id);
       if (req) {
-        setConfirmedRequests(list => [req, ...list]);
-        setExportRequests(requests => requests.filter(r => r.code !== code));
-        // Xóa thông tin kiểm tra tồn kho
+        const confirmedItem = { ...req, status: 'confirmed' as const };
+        setConfirmedRequests(prev => [confirmedItem, ...prev]);
+        setExportItems(prev => [confirmedItem, ...prev]);
+        setExportRequests(prev => prev.filter(r => r.id !== id));
+        
+        // Clear stock check data
         setStockCheck(prev => {
           const newState = { ...prev };
-          delete newState[code];
+          delete newState[req.code];
           return newState;
         });
         setStockDetails(prev => {
           const newState = { ...prev };
-          delete newState[code];
+          delete newState[req.code];
           return newState;
         });
+        
+        alert(`Đã xác nhận yêu cầu xuất hàng ${req.code} thành công!`);
       }
+    } catch (error: any) {
+      console.error('Error confirming request:', error);
+      let errorMessage = 'Có lỗi xảy ra khi xác nhận yêu cầu!';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      alert(errorMessage);
     }
   };
 
@@ -174,82 +207,99 @@ const ExportPage: React.FC = () => {
   const handleCreateExportFromRequest = (code: string) => {
     const req = confirmedRequests.find(r => r.code === code);
     if (req) {
-      setExportItems(items => [
-        {
-          code: req.code.replace('YEUCAU', 'PX'),
-          agency: req.agency,
-          exportDate: req.exportDate,
-          totalAmount: 0, // hoặc nhập số tiền khi lập phiếu
-          creator: '', // hoặc nhập người tạo khi lập phiếu
-          createdDate: req.exportDate,
-          updatedDate: req.exportDate,
-          status: 'confirmed',
-        },
-        ...items
-      ]);
-      setConfirmedRequests(list => list.filter(r => r.code !== code));
+      // Redirect to export creation page with pre-filled data
+      // You can implement this based on your routing structure
+      alert(`Chức năng lập phiếu xuất cho ${code} sẽ được triển khai sau.`);
     }
   };
 
-  // Khi từ chối yêu cầu xuất hàng
-  const handlePostponeRequest = (code: string) => {
-    const req = exportRequests.find(r => r.code === code);
-    if (req) {
-      // Có thể lưu vào danh sách tạm hoãn hoặc xóa khỏi danh sách yêu cầu
-      setExportRequests(requests => requests.filter(r => r.code !== code));
-      // Xóa thông tin kiểm tra tồn kho
+  // Khi từ chối/tạm hoãn yêu cầu xuất hàng
+  const handlePostponeRequest = async (id: number) => {
+    try {
+      const req = exportRequests.find(r => r.id === id);
+      if (!req) return;
+      
+      // Update status to 'postponed' on server
+      await updateIssueStatus(id, 'postponed', 'Tạm hoãn do không đủ tồn kho hoặc lý do khác');
+      
+      // Remove from pending requests
+      setExportRequests(prev => prev.filter(r => r.id !== id));
+      
+      // Clear stock check data
       setStockCheck(prev => {
         const newState = { ...prev };
-        delete newState[code];
+        delete newState[req.code];
         return newState;
       });
       setStockDetails(prev => {
         const newState = { ...prev };
-        delete newState[code];
+        delete newState[req.code];
         return newState;
       });
+      
+      alert(`Đã tạm hoãn yêu cầu xuất hàng ${req.code}.`);
+    } catch (error: any) {
+      console.error('Error postponing request:', error);
+      let errorMessage = 'Có lỗi xảy ra khi tạm hoãn yêu cầu!';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      }
+      alert(errorMessage);
     }
   };
 
-  // Hàm kiểm tra tồn kho (random, có loading)
-  const handleCheckStock = (code: string) => {
-    setStockCheck(prev => ({
-      ...prev,
-      [code]: 'checking',
-    }));
+  // Real stock check using backend API
+  const handleCheckStock = async (code: string) => {
+    setStockCheck(prev => ({ ...prev, [code]: 'checking' }));
     
-    setTimeout(() => {
-      // Mock data cho chi tiết tồn kho - thực tế hơn
-      const mockItems = [
-        { name: 'Laptop Dell Inspiron 15', requested: 5, available: Math.floor(Math.random() * 10) + 1 },
-        { name: 'Chuột không dây Logitech', requested: 20, available: Math.floor(Math.random() * 30) + 5 },
-        { name: 'Bàn phím cơ Gaming', requested: 8, available: Math.floor(Math.random() * 15) + 2 },
-        { name: 'Màn hình 24 inch', requested: 3, available: Math.floor(Math.random() * 8) + 1 },
-        { name: 'USB 3.0 32GB', requested: 15, available: Math.floor(Math.random() * 25) + 3 },
-      ];
+    try {
+      // Find the request
+      const req = exportRequests.find(r => r.code === code);
+      if (!req) {
+        throw new Error('Request not found');
+      }
       
-      // Cập nhật status cho từng item - logic chính xác hơn
-      const updatedItems = mockItems.map(item => ({
-        ...item,
-        status: item.requested <= item.available ? 'sufficient' as const : 'insufficient' as const
-      }));
+      // Get detailed issue information including items
+      const issueDetail = await getIssueById(req.id);
       
-      // Tính toán trạng thái tổng thể - chỉ đủ khi TẤT CẢ items đều đủ
-      const overallStatus = updatedItems.every(item => item.status === 'sufficient') ? 'sufficient' as const : 'insufficient' as const;
+      if (!issueDetail.details || issueDetail.details.length === 0) {
+        throw new Error('No items found in this request');
+      }
       
+      // Check stock for each item
+      const stockPromises = issueDetail.details.map(async (detail) => {
+        const item = await getItemById(detail.item);
+        return {
+          name: item.item_name,
+          requested: detail.quantity,
+          available: item.stock_quantity,
+          status: item.stock_quantity >= detail.quantity ? 'sufficient' : 'insufficient'
+        };
+      });
+      
+      const stockResults = await Promise.all(stockPromises);
+      const overallStatus = stockResults.every(item => item.status === 'sufficient') ? 'sufficient' : 'insufficient';
+      
+      // Update stock details
       setStockDetails(prev => ({
         ...prev,
         [code]: {
-          items: updatedItems,
+          items: stockResults,
           overallStatus
         }
       }));
       
+      // Update stock check status
       setStockCheck(prev => ({
         ...prev,
-        [code]: overallStatus === 'sufficient' ? 'in_stock' : 'out_of_stock',
+        [code]: overallStatus === 'sufficient' ? 'in_stock' : 'out_of_stock'
       }));
-    }, 1500); // Tăng thời gian loading để thực tế hơn
+      
+    } catch (error: any) {
+      console.error('Error checking stock:', error);
+      setStockCheck(prev => ({ ...prev, [code]: 'not_checked' }));
+      alert('Có lỗi xảy ra khi kiểm tra tồn kho. Vui lòng thử lại.');
+    }
   };
 
   return (
@@ -535,7 +585,7 @@ const ExportPage: React.FC = () => {
                               {/* 2 button Xác nhận và Tạm hoãn */}
                               <div className="flex gap-2">
                                 <button
-                                  onClick={() => handleConfirmRequest(req.code)}
+                                  onClick={() => handleConfirmRequest(req.id)}
                                   disabled={stockCheck[req.code] === 'out_of_stock'}
                                   className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-200 ${
                                     stockCheck[req.code] === 'in_stock'
@@ -556,7 +606,7 @@ const ExportPage: React.FC = () => {
                                   </div>
                                 </button>
                                 <button
-                                  onClick={() => handlePostponeRequest(req.code)}
+                                  onClick={() => handlePostponeRequest(req.id)}
                                   className="px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 font-semibold text-sm shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200"
                                   title="Tạm hoãn yêu cầu xuất hàng"
                                 >

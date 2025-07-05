@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { PackagePlus, ListChecks, DollarSign, FilePlus2, Trash2 } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { fetchReceipts, deleteReceipt } from '../../api/import.api';
+import type { ReceiptItem } from '../../api/import.api';
+import { fetchAssignedAgencies } from '../../api/staffAgency.api';
 
 interface ImportRecord {
   id: string;
   importDate: string;
   totalAmount: string;
   agency: string;
+  agencyId: number;
 }
 
 const ImportManagementPage: React.FC = () => {
@@ -17,23 +22,40 @@ const ImportManagementPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [recordToDelete, setRecordToDelete] = useState<ImportRecord | null>(null);
-
-  const [importRecords, setImportRecords] = useState<ImportRecord[]>([
-    {
-      id: 'PN001',
-      importDate: '2024-01-15',
-      totalAmount: '15,000,000',
-      agency: 'Đại lý A',
-    },
-    {
-      id: 'PN002',
-      importDate: '2024-01-14',
-      totalAmount: '22,500,000',
-      agency: 'Đại lý B',
-    },
-  ]);
+  const [importRecords, setImportRecords] = useState<ImportRecord[]>([]);
+  const { user } = useAuth();
+  const [assignedAgencies, setAssignedAgencies] = useState<{agency_id: number; agency_name: string;}[]>([]);
 
   const agencies = ['Tất cả đại lý', 'Đại lý A', 'Đại lý B', 'Đại lý C'];
+
+  // Fetch assigned agencies and import records
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        // Lấy danh sách agency được phân công
+        const agencies = await fetchAssignedAgencies(user.id);
+        setAssignedAgencies(agencies);
+        const agencyIds = agencies.map(a => a.agency_id);
+
+        // Fetch phiếu nhập
+        const data: ReceiptItem[] = await fetchReceipts();
+        // Lọc chỉ phiếu nhập của các agency được phân công
+        const filtered = data.filter(item => agencyIds.includes(item.agency_id));
+        // Map dữ liệu sang ImportRecord
+        const records: ImportRecord[] = filtered.map(item => ({
+          id: item.receipt_id.toString(),
+          importDate: item.receipt_date,
+          totalAmount: Number(item.total_amount).toLocaleString('vi-VN'),
+          agency: item.agency_name,
+          agencyId: item.agency_id
+        }));
+        setImportRecords(records);
+      } catch (error) {
+        console.error('Error loading import data:', error);
+      }
+    })();
+  }, [user]);
 
   // Lọc theo từ khóa và đại lý
   const filteredRecords = importRecords.filter(
@@ -56,11 +78,11 @@ const ImportManagementPage: React.FC = () => {
   const handleDeleteConfirm = async () => {
     if (recordToDelete) {
       try {
-        // Simulate API call
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Call API to delete
+        await deleteReceipt(Number(recordToDelete.id));
         
-        // Remove from local state
-        setImportRecords(importRecords.filter(r => r.id !== recordToDelete.id));
+        // Update local state
+        setImportRecords(prev => prev.filter(r => r.id !== recordToDelete.id));
         
         // Close modal and reset
         setShowDeleteModal(false);
