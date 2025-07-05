@@ -4,8 +4,11 @@ import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Loading } from '../../components/common';
 import { Truck, ListChecks, DollarSign, BadgeCheck, BadgeAlert, Trash2, PlusCircle } from 'lucide-react';
 import { getIssues, deleteIssue, updateIssue, updateIssueStatus, getIssueById, getItemById } from '../../api/export.api';
+import type { Issue } from '../../api/export.api';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchAssignedAgencies } from '../../api/staffAgency.api';
+import { getReceipts, createReceipt } from '../../api/receipt.api';
+import type { Receipt } from '../../api/receipt.api';
 
 interface ExportItem {
   id: number;
@@ -42,8 +45,6 @@ const ExportPage: React.FC = () => {
 
   const [exportRequests, setExportRequests] = useState<ExportRequest[]>([]);
 
-  const [confirmedRequests, setConfirmedRequests] = useState<ExportRequest[]>([]);
-
   const [stockCheck, setStockCheck] = useState<Record<string, 'not_checked' | 'in_stock' | 'out_of_stock' | 'checking'>>({});
 
   const [stockDetails, setStockDetails] = useState<Record<string, {
@@ -68,14 +69,16 @@ const ExportPage: React.FC = () => {
         agencyIds = assigned.map(a => a.agency_id);
       }
       try {
-        const data = await getIssues();
         // Lọc các issue từ các agency đã phân công: chỉ processing và confirmed
-        const pendingIssues = data.results.filter(issue =>
-          agencyIds.includes(issue.agency_id) && issue.status === 'processing'
-        );
-        const confirmedIssues = data.results.filter(issue =>
-          agencyIds.includes(issue.agency_id) && issue.status === 'confirmed'
-        );
+        let allResults: Issue[] = [];
+        if (agencyIds.length > 0) {
+          const responses = await Promise.all(
+            agencyIds.map(id => getIssues({ agency_id: id }))
+          );
+          allResults = responses.flatMap(r => r.results);
+        }
+        const pendingIssues = allResults.filter(issue => issue.status === 'processing');
+        const confirmedIssues = allResults.filter(issue => issue.status === 'confirmed');
         // Map sang frontend shape
         const mappedPending = pendingIssues.map(issue => ({
           id: issue.issue_id,
@@ -101,8 +104,26 @@ const ExportPage: React.FC = () => {
         }));
         setExportItems(mappedConfirmed);
         setExportRequests(mappedPending);
-        // Hiển thị các phiếu xuất đã confirmed cho staff được ủy quyền
-        setConfirmedRequests(mappedConfirmed);
+        // Lấy danh sách receipts thật cho danh sách phiếu xuất
+        let receiptResults: Receipt[] = [];
+        if (agencyIds.length > 0) {
+          const receiptResponses = await Promise.all(
+            agencyIds.map(id => getReceipts({ agency_id: id }))
+          );
+          receiptResults = receiptResponses.flatMap(r => r.results);
+        }
+        const mappedReceipts = receiptResults.map(receipt => ({
+          id: receipt.receipt_id,
+          code: `PX${receipt.receipt_id.toString().padStart(3, '0')}`,
+          agency: receipt.agency_name,
+          exportDate: receipt.receipt_date,
+          totalAmount: Number(receipt.total_amount),
+          creator: receipt.user_name,
+          createdDate: receipt.created_at,
+          updatedDate: receipt.updated_at || receipt.created_at,
+          status: receipt.status === 'processing' ? 'pending' as const : 'confirmed' as const,
+        }));
+        setExportItems(mappedReceipts);
       } catch (error) {
         console.error('Error loading export page data:', error);
       }
@@ -112,8 +133,7 @@ const ExportPage: React.FC = () => {
 
   // Filter logic
   const filteredItems = exportItems.filter(item => {
-    // Chỉ lấy phiếu đã xác nhận
-    if (item.status !== 'confirmed') return false;
+    // Hiển thị mọi phiếu (processing và confirmed)
     const matchesSearch = 
       item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.agency.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -167,49 +187,51 @@ const ExportPage: React.FC = () => {
 
   // Khi xác nhận yêu cầu xuất hàng
   const handleConfirmRequest = async (id: number) => {
+    const req = exportRequests.find(r => r.id === id);
+    if (!req) return;
     try {
-      // Update status to 'confirmed' on server
-      await updateIssueStatus(id, 'confirmed', 'Đã xác nhận xuất hàng bởi nhân viên');
-      
-      // Move from pending to confirmed list
-      const req = exportRequests.find(r => r.id === id);
-      if (req) {
-        const confirmedItem = { ...req, status: 'confirmed' as const };
-        setConfirmedRequests(prev => [confirmedItem, ...prev]);
-        setExportItems(prev => [confirmedItem, ...prev]);
-        setExportRequests(prev => prev.filter(r => r.id !== id));
-        
-        // Clear stock check data
-        setStockCheck(prev => {
-          const newState = { ...prev };
-          delete newState[req.code];
-          return newState;
-        });
-        setStockDetails(prev => {
-          const newState = { ...prev };
-          delete newState[req.code];
-          return newState;
-        });
-        
-        alert(`Đã xác nhận yêu cầu xuất hàng ${req.code} thành công!`);
+      // Confirm issue status
+      await updateIssueStatus(id, 'confirmed', 'Đã xác nhận xuất hàng và lập phiếu xuất');
+      // Fetch issue details
+      const issueDetail = await getIssueById(req.id);
+      if (!issueDetail.details || issueDetail.details.length === 0) {
+        alert('Không có chi tiết để lập phiếu xuất.');
+        return;
       }
+      // Prepare receipt payload
+      const payload = {
+        agency_id: issueDetail.agency_id,
+        receipt_date: issueDetail.issue_date,
+        items: issueDetail.details.map(detail => ({
+          item_id: detail.item,
+          quantity: detail.quantity,
+          unit_price: Number(detail.unit_price),
+        })),
+      };
+      console.log('Creating receipt with payload:', payload);
+      // Create receipt
+      const newReceipt = await createReceipt(payload);
+      // Map to ExportItem for UI
+      const newExportItem: ExportItem = {
+        id: newReceipt.receipt_id,
+        code: `PX${newReceipt.receipt_id.toString().padStart(3, '0')}`,
+        agency: newReceipt.agency_name,
+        exportDate: newReceipt.receipt_date,
+        totalAmount: Number(newReceipt.total_amount),
+        creator: newReceipt.user_name,
+        createdDate: newReceipt.created_at,
+        updatedDate: newReceipt.updated_at || newReceipt.created_at,
+        status: 'confirmed',
+      };
+      // Update lists
+      setExportItems(prev => [newExportItem, ...prev]);
+      setExportRequests(prev => prev.filter(r => r.id !== req.id));
+      alert(`Đã lập phiếu xuất ${newExportItem.code} thành công!`);
     } catch (error: any) {
-      console.error('Error confirming request:', error);
-      let errorMessage = 'Có lỗi xảy ra khi xác nhận yêu cầu!';
-      if (error.response?.data?.message) {
-        errorMessage = error.response.data.message;
-      }
-      alert(errorMessage);
-    }
-  };
-
-  // Khi lập phiếu xuất từ yêu cầu đã xác nhận
-  const handleCreateExportFromRequest = (code: string) => {
-    const req = confirmedRequests.find(r => r.code === code);
-    if (req) {
-      // Redirect to export creation page with pre-filled data
-      // You can implement this based on your routing structure
-      alert(`Chức năng lập phiếu xuất cho ${code} sẽ được triển khai sau.`);
+      console.error('Error confirming and creating receipt:', error);
+      console.error('Response data:', error.response?.data);
+      const errMsg = error.response?.data?.error || error.response?.data?.message || error.message;
+      alert(`Có lỗi khi lập phiếu xuất: ${errMsg}`);
     }
   };
 
@@ -273,7 +295,7 @@ const ExportPage: React.FC = () => {
           name: item.item_name,
           requested: detail.quantity,
           available: item.stock_quantity,
-          status: item.stock_quantity >= detail.quantity ? 'sufficient' : 'insufficient'
+          status: item.stock_quantity >= detail.quantity ? 'sufficient' as const : 'insufficient' as const
         };
       });
       
@@ -402,6 +424,7 @@ const ExportPage: React.FC = () => {
                   <th className="px-6 py-3 text-left whitespace-nowrap min-w-[150px]">Đại lý</th>
                   <th className="px-6 py-3 text-left whitespace-nowrap min-w-[100px]">Ngày lập phiếu</th>
                   <th className="px-6 py-3 text-left whitespace-nowrap min-w-[120px]">Tổng tiền</th>
+                  <th className="px-6 py-3 text-left whitespace-nowrap min-w-[120px]">Trạng thái</th>
                   <th className="px-6 py-3 text-left whitespace-nowrap min-w-[120px]">Thao tác</th>
                 </tr>
               </thead>
@@ -418,6 +441,13 @@ const ExportPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 text-gray-700 whitespace-nowrap">{new Date(item.exportDate).toLocaleDateString('vi-VN')}</td>
                     <td className="px-6 py-4 text-green-700 font-bold whitespace-nowrap">{item.totalAmount.toLocaleString('vi-VN')} VND</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {item.status === 'confirmed' ? (
+                        <span className="text-green-600 font-semibold">Đã xác nhận</span>
+                      ) : (
+                        <span className="text-yellow-600 font-semibold">Đang xử lý</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                         <Link
@@ -625,39 +655,6 @@ const ExportPage: React.FC = () => {
                     ))}
                   </tbody>
                 </table>
-                {/* Danh sách yêu cầu đã xác nhận nhưng chưa lập phiếu xuất */}
-                {confirmedRequests.length > 0 && (
-                  <>
-                    <h3 className="text-lg font-bold text-blue-700 mt-6 mb-2">Yêu cầu đã xác nhận</h3>
-                    <table className="min-w-full bg-white border border-blue-200 mb-4">
-                      <thead className="bg-gradient-to-r from-blue-50 to-cyan-50 text-blue-700">
-                        <tr className="uppercase text-sm">
-                          <th className="px-4 py-2">Mã yêu cầu</th>
-                          <th className="px-4 py-2">Đại lý</th>
-                          <th className="px-4 py-2">Ngày yêu cầu</th>
-                          <th className="px-4 py-2">Thao tác</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {confirmedRequests.map(req => (
-                          <tr key={req.code} className="border-b hover:bg-blue-50">
-                            <td className="px-4 py-2 font-semibold">{req.code}</td>
-                            <td className="px-4 py-2">{req.agency}</td>
-                            <td className="px-4 py-2">{req.exportDate}</td>
-                            <td className="px-4 py-2">
-                              <button
-                                onClick={() => handleCreateExportFromRequest(req.code)}
-                                className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold"
-                              >
-                                Lập phiếu xuất
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </>
-                )}
                 <button
                   onClick={() => setShowRequestModal(false)}
                   className="mt-2 px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold"

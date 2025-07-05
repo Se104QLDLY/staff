@@ -66,7 +66,7 @@ export interface CreateIssueRequest {
 }
 
 export interface ExportApi {
-  getIssues: () => Promise<PaginatedIssues>;
+  getIssues: (params?: { agency_id?: number; limit?: number; offset?: number; search?: string }) => Promise<PaginatedIssues>;
   getIssueById: (id: number) => Promise<Issue>;
   createIssue: (payload: CreateIssueRequest) => Promise<Issue>;
   updateIssue: (id: number, payload: Partial<Issue>) => Promise<Issue>;
@@ -82,8 +82,8 @@ export interface ExportApi {
 
 export const exportApi: ExportApi = {
   // Get all issues
-  getIssues: async (): Promise<PaginatedIssues> => {
-    const response = await axiosClient.get<PaginatedIssues>('/inventory/issues/');
+  getIssues: async (params?: { agency_id?: number; limit?: number; offset?: number; search?: string }): Promise<PaginatedIssues> => {
+    const response = await axiosClient.get<PaginatedIssues>('/inventory/issues/', { params });
     return response.data;
   },
 

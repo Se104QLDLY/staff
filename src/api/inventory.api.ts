@@ -19,4 +19,9 @@ export interface PaginatedItems {
 export const getItems = async (): Promise<Item[]> => {
   const response = await axiosClient.get<PaginatedItems>('/inventory/items/');
   return response.data.results;
+};
+
+export const updateItem = async (id: number, payload: { stock_quantity: number }): Promise<Item> => {
+  const response = await axiosClient.patch<Item>(`/inventory/items/${id}/`, payload);
+  return response.data;
 }; 
