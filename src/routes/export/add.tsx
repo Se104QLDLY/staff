@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
-import { agencyApi } from '../../api/agency.api';
 import { exportApi } from '../../api/export.api';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
@@ -76,6 +75,8 @@ const AddExportPage: React.FC = () => {
     const updatedProducts = [...formData.products];
     const product = updatedProducts[index];
     
+    if (!product) return; // Safety check
+    
     if (field === 'item_id') {
       // When item is selected, populate item details
       const selectedItem = items.find(item => item.item_id === Number(value));
@@ -83,7 +84,10 @@ const AddExportPage: React.FC = () => {
         product.item_id = selectedItem.item_id;
         product.item_name = selectedItem.item_name;
         product.unit_name = selectedItem.unit_name;
-        product.unit_price = Number(selectedItem.price);
+        // Apply 102% markup on import price (item.price is 100% import price)
+        const basePrice = Number(selectedItem.price);
+        const exportPrice = Math.round(basePrice * 1.02); // 102% of import price
+        product.unit_price = exportPrice;
       }
     } else {
       (product as any)[field] = value;
