@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
-import { Users, Search, Edit, Eye, BadgeCheck, Info } from 'lucide-react';
+import { Users, Search, Edit, Eye, BadgeCheck, Info, AlertTriangle } from 'lucide-react';
 import { getAgencies } from '../../api/agency.api';
 import { useAuth } from '../../hooks/useAuth';
 import axios from 'axios';
@@ -21,14 +21,29 @@ const AgencyPage: React.FC = () => {
           params: { staff_id: user.id },
           withCredentials: true,
         });
-        const assignedIds = assignedRes.data.agencies.map((a: any) => a.id);
         
-        // Fetch all agencies and filter
+        console.log('Staff assigned agencies response:', assignedRes.data);
+        
+        const assignedAgencies = assignedRes.data.agencies || [];
+        
+        // If no agencies assigned, set empty array
+        if (assignedAgencies.length === 0) {
+          setAgencies([]);
+          return;
+        }
+        
+        const assignedIds = assignedAgencies.map((a: any) => a.id);
+        
+        // Fetch all agencies and filter only assigned ones
         const data = await getAgencies();
         const filtered = data.results.filter((a: any) => assignedIds.includes(a.id));
+        
+        console.log('Filtered agencies:', filtered);
         setAgencies(filtered);
       } catch (error) {
         console.error('Error loading agencies:', error);
+        // On error, ensure agencies is empty
+        setAgencies([]);
       }
     };
     loadAgencies();
@@ -91,6 +106,25 @@ const AgencyPage: React.FC = () => {
               />
             </div>
           </div>
+
+          {/* Thông báo khi chưa được phân công agency */}
+          {agencies.length === 0 && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg mb-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-semibold text-yellow-800">
+                    Chưa được phân công quản lý đại lý
+                  </h3>
+                  <p className="text-yellow-700 mt-1">
+                    Bạn chưa được phân công quản lý đại lý nào. Vui lòng liên hệ quản trị viên để được cấp quyền truy cập.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Bảng đại lý */}
           <div className="overflow-x-auto rounded-2xl shadow-xl border-2 border-blue-100 bg-white">

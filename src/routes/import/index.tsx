@@ -22,6 +22,7 @@ import {
 import { getReceipts, deleteReceipt, type Receipt } from '../../api/receipt.api';
 import { getItems } from '../../api/inventory.api';
 import type { Item as InventoryItem } from '../../api/inventory.api';
+import { useInventory } from '../../context/InventoryContext';
 
 interface ImportRecord {
   id: string;
@@ -58,6 +59,8 @@ const ImportManagementPage: React.FC = () => {
     lowStockItems: 0,
     totalItems: 0
   });
+
+  const { inventoryVersion, refreshInventory } = useInventory();
 
   const fetchImportData = async () => {
     try {
@@ -118,7 +121,7 @@ const ImportManagementPage: React.FC = () => {
 
   useEffect(() => {
     fetchImportData();
-  }, []);
+  }, [inventoryVersion]); // Auto-refresh when inventory changes
 
   const handleDeleteReceipt = async (receiptId: string) => {
     try {
@@ -127,6 +130,9 @@ const ImportManagementPage: React.FC = () => {
       
       // Refresh data after successful deletion
       await fetchImportData();
+      
+      // Refresh inventory to update stock quantities
+      refreshInventory();
       
       setShowDeleteModal(false);
       setSelectedReceiptId(null);
@@ -491,12 +497,24 @@ const ImportManagementPage: React.FC = () => {
                   <span className="font-semibold">{inventoryItems.length}</span> sản phẩm | 
                   <span className="font-semibold text-red-600 ml-2">{stats.lowStockItems}</span> sắp hết hàng
                 </div>
-                <button
-                  onClick={() => setShowInventoryModal(false)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  Đóng
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      refreshInventory();
+                      fetchImportData();
+                    }}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Làm mới
+                  </button>
+                  <button
+                    onClick={() => setShowInventoryModal(false)}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Đóng
+                  </button>
+                </div>
               </div>
             </div>
           </div>

@@ -1,7 +1,4 @@
 import { Routes, Route } from 'react-router-dom';
-import { LoginPage } from '../pages/LoginPage';
-import Register from './auth/Register';
-import ForgotPassword from './auth/ForgotPassword';
 import ImportManagementPage from './import';
 import AddImportPage from './import/add';
 import ViewImportPage from './import/view.tsx';
@@ -28,12 +25,7 @@ import { ProtectedRoute } from './ProtectedRoute';
 const AppRoutes = () => {
   return (
     <Routes>
-      {/* Auth routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      
-      {/* Protected routes */}
+      {/* All routes are protected - redirect to central login if not authenticated */}
       <Route element={<ProtectedRoute />}>
         <Route path="/" element={<AgencyPage />} />
         <Route path="/agencies" element={<AgencyPage />} />

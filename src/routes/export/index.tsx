@@ -2,11 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Loading } from '../../components/common';
-import { Truck, ListChecks, DollarSign, BadgeAlert, Trash2, PlusCircle } from 'lucide-react';
+import { Truck, ListChecks, DollarSign, BadgeAlert, Trash2, PlusCircle, AlertTriangle } from 'lucide-react';
 import { getIssues, deleteIssue, updateIssueStatus, getIssueById, getItemById } from '../../api/export.api';
 import type { Issue } from '../../api/export.api';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchAssignedAgencies } from '../../api/staffAgency.api';
+import { useInventory } from '../../context/InventoryContext';
 
 interface ExportItem {
   id: number;
@@ -36,6 +37,7 @@ interface AssignedAgency {
 
 const ExportPage: React.FC = () => {
   const { user } = useAuth();
+  const { refreshInventory } = useInventory();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgency, setSelectedAgency] = useState<string>('all');
   const [startDate, setStartDate] = useState<string>('');
@@ -67,18 +69,13 @@ const ExportPage: React.FC = () => {
   useEffect(() => {
     const loadIssues = async () => {
       if (!user) return;
-      // Xác định danh sách agency staff được phân công
-      let agencyIds: number[] = [];
-      let agencyList: AssignedAgency[] = [];
-      if ((user as any).agency_id) {
-        agencyIds = [(user as any).agency_id];
-        // Nếu user có agency_id thì lấy tên agency từ exportItems sau
-      } else {
-        const assigned = await fetchAssignedAgencies(user.id);
-        agencyIds = assigned.map(a => a.agency_id);
-        agencyList = assigned.map(a => ({agency_id: a.agency_id, agency_name: a.agency_name}));
-        setAssignedAgencies(agencyList);
-      }
+      
+      // Staff chỉ có thể truy cập agency được phân công qua StaffAgency
+      const assigned = await fetchAssignedAgencies(user.id);
+      const agencyIds = assigned.map(a => a.agency_id);
+      const agencyList = assigned.map(a => ({agency_id: a.agency_id, agency_name: a.agency_name}));
+      setAssignedAgencies(agencyList);
+      
       try {
         // Lọc các issue từ các agency đã phân công: chỉ processing và confirmed
         let allResults: Issue[] = [];
@@ -134,17 +131,13 @@ const ExportPage: React.FC = () => {
         setExportItems(mappedConfirmed);
         setExportRequests(mappedPending);
         
-        // Tạo danh sách agency unique từ tất cả items
-        const allItems = [...mappedConfirmed, ...mappedPending];
-        const uniqueAgencies: AssignedAgency[] = Array.from(new Set(allItems.map(item => item.agency)))
-          .map(agencyName => ({
-            agency_id: 0, // Không cần ID cho filter
-            agency_name: agencyName
-          }));
-        
-        // Nếu chưa có assignedAgencies thì set từ unique agencies
-        if (agencyList.length === 0) {
-          setAssignedAgencies(uniqueAgencies);
+        // Chỉ set assignedAgencies nếu đã có agencyList từ API
+        // Không tạo uniqueAgencies từ all items để tránh staff thấy agency không được phân công
+        if (agencyList.length > 0) {
+          setAssignedAgencies(agencyList);
+        } else {
+          // Staff chưa được assign agency nào - hiển thị danh sách rỗng
+          setAssignedAgencies([]);
         }
       } catch (error) {
         console.error('Error loading export page data:', error);
@@ -223,6 +216,9 @@ const ExportPage: React.FC = () => {
         
         setExportItems(exportItems.filter(item => item.id !== itemToDelete.id));
         
+        // Refresh inventory to update stock quantities
+        refreshInventory();
+        
         // Close modal and reset
         setShowDeleteModal(false);
         setItemToDelete(null);
@@ -275,6 +271,10 @@ const ExportPage: React.FC = () => {
       // Cập nhật state
       setExportItems(prev => [...prev, newExportItem]);
       setExportRequests(prev => prev.filter(r => r.id !== id));
+      
+      // Refresh inventory data to update stock quantities
+      refreshInventory();
+      
       alert(`Đã lập phiếu xuất ${newExportItem.code} thành công! Chờ đại lý xác nhận.`);
     } catch (error: any) {
       console.error('Error confirming issue:', error);
@@ -463,6 +463,26 @@ const ExportPage: React.FC = () => {
               onChange={(e) => setEndDate(e.target.value)}
             />
           </div>
+          
+          {/* Thông báo khi chưa được phân công agency */}
+          {assignedAgencies.length === 0 && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg mb-6">
+              <div className="flex items-center">
+                <div className="flex-shrink-0">
+                  <AlertTriangle className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-lg font-semibold text-yellow-800">
+                    Chưa được phân công quản lý đại lý
+                  </h3>
+                  <p className="text-yellow-700 mt-1">
+                    Bạn chưa được phân công quản lý đại lý nào. Vui lòng liên hệ quản trị viên để được cấp quyền truy cập.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
           <h2 className="text-2xl font-extrabold text-blue-800 mb-6 drop-shadow flex items-center gap-2">
             <ListChecks className="h-6 w-6 text-blue-500" /> Danh sách phiếu xuất
           </h2>

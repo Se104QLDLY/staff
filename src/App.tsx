@@ -3,6 +3,8 @@ import { AuthProvider } from './hooks/useAuth';
 import AppRoutes from './routes';
 import ErrorBoundary from './components/ErrorBoundary';
 import { ToastProvider } from './components/common';
+import { InventoryProvider } from './context/InventoryContext';
+import './utils/debugInventory'; // Import debug utility
 
 function App() {
   return (
@@ -10,7 +12,9 @@ function App() {
       <ToastProvider>
         <Router>
           <AuthProvider>
-            <AppRoutes />
+            <InventoryProvider>
+              <AppRoutes />
+            </InventoryProvider>
           </AuthProvider>
         </Router>
       </ToastProvider>

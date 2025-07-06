@@ -5,6 +5,8 @@ import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { fetchAssignedAgencies } from '../../api/staffAgency.api';
 import { useAuth } from '../../hooks/useAuth';
+import { useInventory } from '../../context/InventoryContext';
+import { AlertTriangle } from 'lucide-react';
 
 interface Agency {
   agency_id: number;
@@ -32,6 +34,7 @@ interface ProductForm {
 const AddExportPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { refreshInventory } = useInventory();
   const [loading, setLoading] = useState(false);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -150,6 +153,10 @@ const AddExportPage: React.FC = () => {
       };
 
       await exportApi.createIssue(createData);
+      
+      // Refresh inventory to update stock quantities
+      refreshInventory();
+      
       toast.success('Tạo phiếu xuất thành công!');
       navigate('/export');
     } catch (error: any) {
@@ -164,6 +171,26 @@ const AddExportPage: React.FC = () => {
     <DashboardLayout>
       <div className="bg-white rounded-3xl shadow-xl p-8 border-2 border-blue-100 max-w-4xl mx-auto">
         <h1 className="text-3xl font-extrabold text-blue-800 mb-8 drop-shadow uppercase tracking-wide text-center">Tạo phiếu xuất</h1>
+        
+        {/* Thông báo khi chưa được phân công agency */}
+        {agencies.length === 0 && (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-lg mb-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <AlertTriangle className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="ml-3">
+                <h3 className="text-lg font-semibold text-yellow-800">
+                  Chưa được phân công quản lý đại lý
+                </h3>
+                <p className="text-yellow-700 mt-1">
+                  Bạn chưa được phân công quản lý đại lý nào. Vui lòng liên hệ quản trị viên để được cấp quyền truy cập.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
