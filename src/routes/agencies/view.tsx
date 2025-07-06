@@ -1,8 +1,9 @@
-import React, { useState, useEffect, ReactNode, MouseEventHandler } from 'react';
+import { useState, useEffect } from 'react';
+import type { ReactNode, MouseEventHandler } from 'react';
 import { useParams } from 'react-router-dom';
 import { getAgencyById } from '../../api/agency.api';
 // In a real app, you would use: import { DashboardLayout } from '../../components/layout/DashboardLayout';
-import { Users, BadgeCheck, AlertCircle, Edit, ArrowLeft, Info, Phone, Mail, Building, MapPin, User, Calendar, Clock, DollarSign, List, Settings, Trash2, ShieldAlert } from 'lucide-react';
+import { Users, BadgeCheck, Edit, ArrowLeft, Info, Phone, Mail, Building, MapPin, User, Calendar, Clock, DollarSign } from 'lucide-react';
 
 type DashboardLayoutProps = { children: ReactNode };
 const DashboardLayout = ({ children }: DashboardLayoutProps) => (
@@ -19,29 +20,29 @@ const Link = ({ to, children, className }: LinkProps) => <a href={to} className=
 // --- Main Component ---
 
 interface Agency {
-  id: string;
-  code: string;
-  name: string;
-  type: {
-    id: number;
-    name: string;
+  agency_id: number;
+  agency_name: string;
+  agency_type: {
+    agency_type_id: number;
+    type_name: string;
+    max_debt: number;
+    description?: string;
   };
-  district: string;
+  district: {
+    district_id: number;
+    district_name: string;
+    city_name?: string;
+    max_agencies: number;
+  };
   address: string;
-  phone: string;
-  email: string;
-  createdDate: string;
-  updatedDate: string;
-  manager?: string;
-  debt?: number;
-  creditLimit?: number;
-  status: 'Hoạt động' | 'Tạm dừng' | 'Ngừng hợp tác';
-  debtHistory: {
-    date: string;
-    description: string;
-    amount: number;
-    balance: number;
-  }[];
+  phone_number: string;
+  email?: string;
+  representative?: string;
+  reception_date: string;
+  debt_amount: number;
+  created_at: string;
+  updated_at: string;
+  user_id?: number;
 }
 
 // --- Helper Functions for Styling ---
@@ -126,7 +127,7 @@ const ViewAgencyPage = () => {
     // Real agency data
     const agency: Agency = agencyData;
     
-    const debtPercentage = ((agency.debt || 0) / (agency.creditLimit || 1)) * 100;
+    const debtPercentage = ((agency.debt_amount || 0) / (agency.agency_type.max_debt || 1)) * 100;
     const getProgressBarColor = () => {
         if (debtPercentage > 80) return 'bg-red-500';
         if (debtPercentage > 60) return 'bg-yellow-500';
@@ -135,34 +136,6 @@ const ViewAgencyPage = () => {
 
     const renderContent = () => {
         switch(activeTab) {
-            case 'debt-history':
-                return (
-                    <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200/80 animate-fade-in">
-                        <h2 className="text-xl font-bold text-slate-800 mb-5">Lịch sử công nợ</h2>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm text-left text-slate-500">
-                                <thead className="text-xs text-slate-700 uppercase bg-slate-100">
-                                    <tr>
-                                        <th scope="col" className="px-6 py-3 rounded-l-lg">Ngày</th>
-                                        <th scope="col" className="px-6 py-3">Diễn giải</th>
-                                        <th scope="col" className="px-6 py-3 text-right">Số tiền (VND)</th>
-                                        <th scope="col" className="px-6 py-3 text-right rounded-r-lg">Số dư cuối</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {agency.debtHistory.map((item, index) => (
-                                        <tr key={index} className="bg-white border-b last:border-b-0 hover:bg-slate-50">
-                                            <td className="px-6 py-4 font-medium text-slate-900">{new Date(item.date).toLocaleDateString('vi-VN')}</td>
-                                            <td className="px-6 py-4">{item.description}</td>
-                                            <td className={`px-6 py-4 text-right font-semibold ${item.amount > 0 ? 'text-red-600' : 'text-green-600'}`}>{item.amount.toLocaleString('vi-VN')}</td>
-                                            <td className="px-6 py-4 text-right font-semibold text-slate-800">{item.balance.toLocaleString('vi-VN')}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                );
             case 'overview':
             default:
                 return (
@@ -170,24 +143,44 @@ const ViewAgencyPage = () => {
                         <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200/80">
                             <h2 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3"><Info className="h-6 w-6 text-[#007bff]"/>Thông tin cơ bản</h2>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                                <InfoField label="Tên đại lý" value={agency.name} icon={<Building className="w-4 h-4 mr-2"/>} className="md:col-span-2"/>
-                                <InfoField label="Mã đại lý" value={agency.code} icon={<Building className="w-4 h-4 mr-2"/>} />
+                                <InfoField label="Tên đại lý" value={agency.agency_name} icon={<Building className="w-4 h-4 mr-2"/>} className="md:col-span-2"/>
+                                <InfoField label="Mã đại lý" value={`DL${agency.agency_id.toString().padStart(3, '0')}`} icon={<Building className="w-4 h-4 mr-2"/>} />
                                  <div>
                                      <label className="flex items-center text-sm font-medium text-slate-500 mb-1">
                                         <BadgeCheck className="w-4 h-4 mr-2"/>Loại đại lý
                                     </label>
-                                    <span className={`inline-block px-3 py-1.5 rounded-md text-sm font-bold ${getAgencyTypeChipStyle(agency.type.name)}`}>{agency.type.name}</span>
+                                    <span className={`inline-block px-3 py-1.5 rounded-md text-sm font-bold ${getAgencyTypeChipStyle(agency.agency_type.type_name)}`}>{agency.agency_type.type_name}</span>
                                 </div>
                                 <InfoField label="Địa chỉ" value={agency.address} icon={<MapPin className="w-4 h-4 mr-2"/>} className="md:col-span-2"/>
-                                <InfoField label="Quận/Huyện" value={agency.district} icon={<MapPin className="w-4 h-4 mr-2"/>}/>
-                                <InfoField label="Người quản lý" value={agency.manager || 'Chưa có thông tin'} icon={<User className="w-4 h-4 mr-2"/>}/>
+                                <InfoField label="Quận/Huyện" value={agency.district.district_name} icon={<MapPin className="w-4 h-4 mr-2"/>}/>
+                                <InfoField label="Thành phố" value={agency.district.city_name || 'Chưa có thông tin'} icon={<MapPin className="w-4 h-4 mr-2"/>}/>
+                                <InfoField label="Người đại diện" value={agency.representative || 'Chưa có thông tin'} icon={<User className="w-4 h-4 mr-2"/>}/>
+                                <InfoField label="Ngày tiếp nhận" value={new Date(agency.reception_date).toLocaleDateString('vi-VN')} icon={<Calendar className="w-4 h-4 mr-2"/>}/>
                             </div>
                         </div>
+                        
+                        {agency.agency_type.description && (
+                        <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200/80">
+                            <h2 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-3"><BadgeCheck className="h-6 w-6 text-indigo-600"/>Thông tin loại đại lý</h2>
+                            <div className="space-y-3">
+                                <InfoField 
+                                    label="Mô tả" 
+                                    value={agency.agency_type.description} 
+                                    icon={<Info className="w-4 h-4 mr-2"/>}
+                                />
+                                <InfoField 
+                                    label="Số đại lý tối đa trong quận" 
+                                    value={`${agency.district.max_agencies} đại lý`} 
+                                    icon={<Users className="w-4 h-4 mr-2"/>}
+                                />
+                            </div>
+                        </div>
+                        )}
                          <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200/80">
                             <h2 className="text-xl font-bold text-slate-800 mb-5 flex items-center gap-3"><Phone className="h-6 w-6 text-green-600"/>Thông tin liên hệ</h2>
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                                <InfoField label="Số điện thoại" value={<a href={`tel:${agency.phone}`} className="text-blue-600 hover:underline">{agency.phone}</a>} icon={<Phone className="w-4 h-4 mr-2"/>}/>
-                                <InfoField label="Email" value={<a href={`mailto:${agency.email}`} className="text-blue-600 hover:underline">{agency.email}</a>} icon={<Mail className="w-4 h-4 mr-2"/>}/>
+                                <InfoField label="Số điện thoại" value={<a href={`tel:${agency.phone_number}`} className="text-blue-600 hover:underline">{agency.phone_number}</a>} icon={<Phone className="w-4 h-4 mr-2"/>}/>
+                                <InfoField label="Email" value={agency.email ? <a href={`mailto:${agency.email}`} className="text-blue-600 hover:underline">{agency.email}</a> : 'Chưa có thông tin'} icon={<Mail className="w-4 h-4 mr-2"/>}/>
                             </div>
                         </div>
                     </div>
@@ -213,15 +206,15 @@ const ViewAgencyPage = () => {
                                 <Users className="h-8 w-8 text-white" />
                             </div>
                             <div>
-                                <h1 className="text-3xl font-bold text-slate-800">{agency.name}</h1>
-                                <p className="text-slate-500 text-base mt-1">Mã đại lý: <span className="font-semibold text-slate-600">{agency.code}</span></p>
+                                <h1 className="text-3xl font-bold text-slate-800">{agency.agency_name}</h1>
+                                <p className="text-slate-500 text-base mt-1">Mã đại lý: <span className="font-semibold text-slate-600">DL{agency.agency_id.toString().padStart(3, '0')}</span></p>
                             </div>
                         </div>
                         <div className="flex items-center gap-2 flex-shrink-0">
                             <Link to="/agencies" className="hidden sm:flex items-center justify-center px-4 py-2 border-2 border-slate-300 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors font-semibold gap-2">
                                 <ArrowLeft className="h-4 w-4" /><span>Quay lại</span>
                             </Link>
-                             <Link to={`/agencies/edit/${agency.id}`} className="flex items-center justify-center px-4 py-2 bg-[#007bff] text-white rounded-lg hover:bg-[#0A4A7D] transition-colors font-semibold gap-2 shadow-sm">
+                             <Link to={`/agencies/edit/${agency.agency_id}`} className="flex items-center justify-center px-4 py-2 bg-[#007bff] text-white rounded-lg hover:bg-[#0A4A7D] transition-colors font-semibold gap-2 shadow-sm">
                                 <Edit className="h-4 w-4" /><span>Chỉnh sửa</span>
                             </Link>
                         </div>
@@ -233,7 +226,6 @@ const ViewAgencyPage = () => {
                            {/* Tab Navigation */}
                             <div className="flex items-center gap-2 p-1.5 bg-slate-200/80 rounded-lg mb-6">
                                 <TabButton label="Tổng quan" icon={<Info className="h-4 w-4" />} isActive={activeTab === 'overview'} onClick={() => setActiveTab('overview')} />
-                                <TabButton label="Lịch sử công nợ" icon={<List className="h-4 w-4" />} isActive={activeTab === 'debt-history'} onClick={() => setActiveTab('debt-history')} />
                             </div>
                             {renderContent()}
                         </div>
@@ -244,11 +236,9 @@ const ViewAgencyPage = () => {
                                 <h3 className="text-lg font-bold text-slate-800 mb-4">Trạng thái</h3>
                                 <div className="flex justify-between items-center">
                                     <span className="text-slate-600 font-medium">Tình trạng:</span>
-                                    <span className={`px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1.5 ${getStatusChipStyle(agency.status)}`}>
-                                        {agency.status === 'Hoạt động' && <BadgeCheck className="h-4 w-4" />}
-                                        {agency.status === 'Tạm dừng' && <AlertCircle className="h-4 w-4" />}
-                                        {agency.status === 'Ngừng hợp tác' && <AlertCircle className="h-4 w-4" />}
-                                        {agency.status}
+                                    <span className={`px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1.5 ${getStatusChipStyle('Hoạt động')}`}>
+                                        <BadgeCheck className="h-4 w-4" />
+                                        Hoạt động
                                     </span>
                                 </div>
                             </div>
@@ -258,11 +248,11 @@ const ViewAgencyPage = () => {
                                  <div className="space-y-4">
                                      <div>
                                         <label className="text-sm font-medium text-slate-500">Nợ hiện tại</label>
-                                        <p className="text-red-600 font-bold text-xl">{agency.debt?.toLocaleString('vi-VN')} VND</p>
+                                        <p className="text-red-600 font-bold text-xl">{Number(agency.debt_amount).toLocaleString('vi-VN')} VND</p>
                                     </div>
                                     <div>
                                         <label className="text-sm font-medium text-slate-500">Hạn mức tín dụng</label>
-                                        <p className="text-green-700 font-bold text-xl">{agency.creditLimit?.toLocaleString('vi-VN')} VND</p>
+                                        <p className="text-green-700 font-bold text-xl">{Number(agency.agency_type.max_debt).toLocaleString('vi-VN')} VND</p>
                                     </div>
                                     <div>
                                         <div className="flex items-center justify-between mb-1">
@@ -270,7 +260,7 @@ const ViewAgencyPage = () => {
                                             <span className="font-bold text-slate-800">{debtPercentage.toFixed(1)}%</span>
                                         </div>
                                         <div className="bg-slate-200 rounded-full h-2.5">
-                                            <div className={`h-2.5 rounded-full transition-all duration-500 ${getProgressBarColor()}`} style={{ width: `${debtPercentage}%` }}></div>
+                                            <div className={`h-2.5 rounded-full transition-all duration-500 ${getProgressBarColor()}`} style={{ width: `${Math.min(100, debtPercentage)}%` }}></div>
                                         </div>
                                     </div>
                                  </div>
@@ -279,8 +269,9 @@ const ViewAgencyPage = () => {
                             <div className="bg-white rounded-xl p-6 shadow-md border border-slate-200/80">
                                  <h3 className="text-lg font-bold text-slate-800 mb-4">Thời gian</h3>
                                  <div className="space-y-4">
-                                     <div className="flex items-start gap-3"><Calendar className="w-5 h-5 text-slate-400 mt-0.5"/><div><p className="block text-slate-500 font-medium text-sm">Ngày tạo</p><p className="text-slate-700 font-semibold">{new Date(agency.createdDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p></div></div>
-                                     <div className="flex items-start gap-3"><Clock className="w-5 h-5 text-slate-400 mt-0.5"/><div><p className="block text-slate-500 font-medium text-sm">Cập nhật lần cuối</p><p className="text-slate-700 font-semibold">{new Date(agency.updatedDate).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' })}</p></div></div>
+                                     <div className="flex items-start gap-3"><Calendar className="w-5 h-5 text-slate-400 mt-0.5"/><div><p className="block text-slate-500 font-medium text-sm">Ngày tiếp nhận</p><p className="text-slate-700 font-semibold">{new Date(agency.reception_date).toLocaleDateString('vi-VN')}</p></div></div>
+                                     {agency.created_at && <div className="flex items-start gap-3"><Calendar className="w-5 h-5 text-slate-400 mt-0.5"/><div><p className="block text-slate-500 font-medium text-sm">Ngày tạo</p><p className="text-slate-700 font-semibold">{new Date(agency.created_at).toLocaleDateString('vi-VN')}</p></div></div>}
+                                     {agency.updated_at && <div className="flex items-start gap-3"><Clock className="w-5 h-5 text-slate-400 mt-0.5"/><div><p className="block text-slate-500 font-medium text-sm">Cập nhật lần cuối</p><p className="text-slate-700 font-semibold">{new Date(agency.updated_at).toLocaleDateString('vi-VN')}</p></div></div>}
                                  </div>
                             </div>
                         </div>

@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
-import { getItems, updateItem } from '../../api/inventory.api';
+import { getItems } from '../../api/inventory.api';
+import { createReceipt } from '../../api/receipt.api';
 import type { Item as InventoryItem } from '../../api/inventory.api';
 import { PackagePlus } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const AddImportPage: React.FC = () => {
   const [formData, setFormData] = useState<{ importDate: string; products: Array<{ item_id: number; quantity: string }> }>({
@@ -11,6 +12,8 @@ const AddImportPage: React.FC = () => {
     products: [{ item_id: 0, quantity: '' }],
   });
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Fetch inventory items
@@ -60,18 +63,51 @@ const AddImportPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.importDate) {
+      alert('Vui lòng chọn ngày lập phiếu');
+      return;
+    }
+
+    if (formData.products.some(p => !p.quantity || Number(p.quantity) <= 0)) {
+      alert('Vui lòng nhập số lượng hợp lệ cho tất cả sản phẩm');
+      return;
+    }
+
+    setIsLoading(true);
     try {
-      // Update stock directly without history
-      for (const p of formData.products) {
-        const qty = Number(p.quantity) || 0;
+      // Chuẩn bị dữ liệu cho API
+      const items = formData.products.map(p => {
         const item = inventoryItems.find(i => i.item_id === p.item_id);
-        const newStock = (item?.stock_quantity || 0) + qty;
-        await updateItem(p.item_id, { stock_quantity: newStock });
-      }
-      alert('Nhập kho thành công!');
+        return {
+          item_id: p.item_id,
+          quantity: Number(p.quantity),
+          unit_price: item?.price || 0
+        };
+      });
+
+      console.log('📤 Creating receipt with data:', {
+        agency_id: 5,
+        receipt_date: formData.importDate,
+        items: items
+      });
+
+      // Tạo phiếu nhập thông qua API
+      const receipt = await createReceipt({
+        agency_id: 5, // Sử dụng agency mặc định "Nhà phân phối"
+        receipt_date: formData.importDate,
+        items: items
+      });
+
+      console.log('✅ Receipt created successfully:', receipt);
+      alert('Tạo phiếu nhập thành công!');
+      navigate('/import'); // Chuyển về trang danh sách
     } catch (error) {
-      console.error('Error updating stock:', error);
-      alert('Có lỗi khi cập nhật tồn kho!');
+      console.error('❌ Error creating receipt:', error);
+      console.error('❌ Error details:', error);
+      alert('Có lỗi khi tạo phiếu nhập: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -170,9 +206,10 @@ const AddImportPage: React.FC = () => {
           <div className="flex justify-end gap-4 mt-6">
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              disabled={isLoading}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Nhập kho
+              {isLoading ? 'Đang xử lý...' : 'Tạo phiếu nhập'}
             </button>
           </div>
         </form>

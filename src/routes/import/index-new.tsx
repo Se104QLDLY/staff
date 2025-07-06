@@ -12,9 +12,12 @@ import {
   Calendar,
   Search,
   AlertTriangle,
+  CheckCircle,
+  Clock,
   BarChart3,
   RefreshCw,
   FileText,
+  ShoppingCart,
   ArrowUp,
   ArrowDown,
   Activity
@@ -29,6 +32,7 @@ interface ImportRecord {
   totalAmount: string;
   agency: string;
   agencyId: number;
+  status: string;
   itemCount: number;
 }
 
@@ -43,9 +47,8 @@ interface ImportStats {
 
 const ImportManagementPage: React.FC = () => {
   const [importRecords, setImportRecords] = useState<ImportRecord[]>([]);
-  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]); // Used for calculations
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showInventoryModal, setShowInventoryModal] = useState(false);
   const [selectedReceiptId, setSelectedReceiptId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -79,7 +82,8 @@ const ImportManagementPage: React.FC = () => {
         totalAmount: Number(item.total_amount).toLocaleString('vi-VN'),
         agency: item.agency_name || 'Nhà phân phối',
         agencyId: item.agency_id || 0,
-        itemCount: item.item_count || 0 // Sử dụng item_count từ API
+        status: item.status || 'Hoàn thành',
+        itemCount: item.details?.length || 0
       }));
       
       setImportRecords(records);
@@ -106,9 +110,6 @@ const ImportManagementPage: React.FC = () => {
         totalItems: itemsData.length
       });
       
-      // Debug log to use inventoryItems (avoids TypeScript warning)
-      console.log(`Loaded ${inventoryItems.length} inventory items for dashboard`);
-      
     } catch (error) {
       console.error('Error loading import data:', error);
     } finally {
@@ -119,6 +120,15 @@ const ImportManagementPage: React.FC = () => {
   useEffect(() => {
     fetchImportData();
   }, []);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Hoàn thành': return 'bg-green-100 text-green-700';
+      case 'Đang xử lý': return 'bg-yellow-100 text-yellow-700';
+      case 'Hủy': return 'bg-red-100 text-red-700';
+      default: return 'bg-gray-100 text-gray-700';
+    }
+  };
 
   const handleDeleteReceipt = async (receiptId: string) => {
     try {
@@ -281,12 +291,9 @@ const ImportManagementPage: React.FC = () => {
             </Link>
 
             {/* View Inventory */}
-            <button 
-              onClick={() => setShowInventoryModal(true)}
-              className="group bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-xl shadow-green-500/30 hover:shadow-2xl hover:scale-105 w-full text-left"
-            >
+            <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-2xl p-6 text-white hover:from-green-600 hover:to-green-700 transition-all duration-300 shadow-xl shadow-green-500/30 hover:shadow-2xl hover:scale-105 cursor-pointer">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
                   <Package className="h-6 w-6" />
                 </div>
                 <div>
@@ -298,15 +305,12 @@ const ImportManagementPage: React.FC = () => {
                 <span className="text-green-100 text-sm">{stats.totalItems} sản phẩm</span>
                 <BarChart3 className="h-5 w-5 opacity-70" />
               </div>
-            </button>
+            </div>
 
             {/* Analytics */}
-            <Link 
-              to="/reports"
-              className="group bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white hover:from-purple-600 hover:to-purple-700 transition-all duration-300 shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:scale-105"
-            >
+            <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6 text-white hover:from-purple-600 hover:to-purple-700 transition-all duration-300 shadow-xl shadow-purple-500/30 hover:shadow-2xl hover:scale-105 cursor-pointer">
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
                   <TrendingUp className="h-6 w-6" />
                 </div>
                 <div>
@@ -318,7 +322,7 @@ const ImportManagementPage: React.FC = () => {
                 <span className="text-purple-100 text-sm">Xem chi tiết</span>
                 <BarChart3 className="h-5 w-5 opacity-70" />
               </div>
-            </Link>
+            </div>
           </div>
 
           {/* Recent Receipts */}
@@ -350,7 +354,10 @@ const ImportManagementPage: React.FC = () => {
                   <tr>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Mã phiếu</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Ngày nhập</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Nhà cung cấp</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Số lượng SP</th>
                     <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Tổng tiền</th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Trạng thái</th>
                     <th className="px-6 py-4 text-center text-sm font-semibold text-gray-600">Hành động</th>
                   </tr>
                 </thead>
@@ -363,8 +370,18 @@ const ImportManagementPage: React.FC = () => {
                       <td className="px-6 py-4 text-gray-600">
                         {new Date(record.importDate).toLocaleDateString('vi-VN')}
                       </td>
+                      <td className="px-6 py-4 text-gray-800 font-medium">{record.agency}</td>
+                      <td className="px-6 py-4 text-gray-600">{record.itemCount} SP</td>
                       <td className="px-6 py-4">
                         <span className="font-semibold text-green-600">{record.totalAmount} VND</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(record.status)}`}>
+                          {record.status === 'Hoàn thành' && <CheckCircle size={12} />}
+                          {record.status === 'Đang xử lý' && <Clock size={12} />}
+                          {record.status === 'Hủy' && <AlertTriangle size={12} />}
+                          {record.status}
+                        </span>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-center gap-2">
@@ -412,96 +429,6 @@ const ImportManagementPage: React.FC = () => {
           </div>
         </div>
       </div>
-
-      {/* Inventory Modal */}
-      {showInventoryModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl max-w-4xl w-full mx-4 max-h-[80vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-green-50 to-emerald-50">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                    <Package className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-800">Tồn kho hiện tại</h2>
-                    <p className="text-gray-600">Danh sách sản phẩm và số lượng tồn kho</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowInventoryModal(false)}
-                  className="w-10 h-10 rounded-lg bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-            
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
-              {inventoryItems.length === 0 ? (
-                <div className="text-center py-12">
-                  <Package className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500 text-lg">Không có sản phẩm nào trong kho</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-100">
-                      <tr>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">STT</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Mặt hàng</th>
-                        <th className="px-6 py-4 text-left text-sm font-semibold text-gray-600">Đơn vị</th>
-                        <th className="px-6 py-4 text-right text-sm font-semibold text-gray-600">Tồn kho</th>
-                        <th className="px-6 py-4 text-right text-sm font-semibold text-gray-600">Giá</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {inventoryItems.map((item, index) => (
-                        <tr key={item.item_id} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-6 py-4 text-center font-medium text-gray-500">{index + 1}</td>
-                          <td className="px-6 py-4 font-semibold text-gray-800">{item.item_name}</td>
-                          <td className="px-6 py-4 text-gray-600">{item.unit_name}</td>
-                          <td className="px-6 py-4 text-right">
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-bold ${
-                              item.stock_quantity > 100 
-                                ? 'bg-green-100 text-green-700 border border-green-200' 
-                                : item.stock_quantity > 50 
-                                ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
-                                : item.stock_quantity > 10
-                                ? 'bg-orange-100 text-orange-700 border border-orange-200'
-                                : 'bg-red-100 text-red-700 border border-red-200'
-                            }`}>
-                              {item.stock_quantity.toLocaleString('vi-VN')}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 text-right text-gray-700 font-medium">
-                            {Number(item.price).toLocaleString('vi-VN')} VND
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-            
-            <div className="p-6 border-t border-gray-100 bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600">
-                  <span className="font-semibold">{inventoryItems.length}</span> sản phẩm | 
-                  <span className="font-semibold text-red-600 ml-2">{stats.lowStockItems}</span> sắp hết hàng
-                </div>
-                <button
-                  onClick={() => setShowInventoryModal(false)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                >
-                  Đóng
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (

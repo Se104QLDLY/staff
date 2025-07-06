@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
+import { getPaymentById, updatePayment } from '../../api/payment.api';
+import { getAgencyById } from '../../api/agency.api';
+import { useAuth } from '../../hooks/useAuth';
 
 // =================================================================================
 // MOCK DEPENDENCIES & HELPERS (For standalone running)
 // Trong dự án thật, bạn sẽ dùng 'react-router-dom' và thư viện icon
 // =================================================================================
-
-// Mock react-router-dom hooks
-const useParams = () => ({ id: '101' }); // Giả lập ID từ URL
 
 // Mock Layout Component
 const DashboardLayout = ({ children }) => <div className="w-full">{children}</div>;
@@ -67,6 +67,7 @@ const getAgencies = () => {
 const EditPaymentReceipt = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { user } = useAuth();
   
   // --- STATE MANAGEMENT ---
   const [isLoading, setIsLoading] = useState(true);
@@ -82,29 +83,47 @@ const EditPaymentReceipt = () => {
 
   // --- DATA LOADING EFFECT ---
   useEffect(() => {
-    setupMockData(); // Thiết lập dữ liệu mẫu
-    const loadPaymentData = () => {
+    const loadPaymentData = async () => {
       try {
-        const payments = JSON.parse(localStorage.getItem('payments') || '[]');
-        const payment = payments.find((p) => p.payment_id === Number(id));
-        if (payment) {
-          setFormData({
-            agency_id: payment.agency_id?.toString() || '',
-            payment_date: payment.payment_date || '',
-            amount_collected: payment.amount_collected?.toString() || '',
-            note: payment.note || ''
-          });
-          const agency = agencies.find((a) => a.agency_id === payment.agency_id);
-          setSelectedAgency(agency);
+        if (!id || !user) return;
+        const payment = await getPaymentById(Number(id));
+        if (payment.user_id !== user.id) {
+          alert('Bạn không có quyền chỉnh sửa phiếu thu này!');
+          navigate('/payment');
+          return;
         }
+        if (payment.status !== 'pending' && payment.status !== 'Chưa thanh toán') {
+          alert('Chỉ có thể chỉnh sửa phiếu thu ở trạng thái Chưa thanh toán!');
+          navigate('/payment');
+          return;
+        }
+        setFormData({
+          agency_id: payment.agency_id?.toString() || '',
+          payment_date: payment.payment_date || '',
+          amount_collected: payment.amount_collected?.toString() || '',
+          note: payment.note || ''
+        });
+        // Lấy thông tin đại lý từ backend
+        const agencyRaw = await getAgencyById(payment.agency_id);
+        // Map lại các trường cho FE
+        const agency = {
+          agency_id: agencyRaw.id,
+          agency_name: agencyRaw.name,
+          phone_number: agencyRaw.phone,
+          address: agencyRaw.address,
+          email: agencyRaw.email,
+          debt_amount: parseFloat(agencyRaw.current_debt),
+        };
+        setSelectedAgency(agency);
       } catch (error) {
-        console.error("Lỗi khi tải dữ liệu phiếu thu:", error);
+        alert('Không tìm thấy phiếu thu hoặc dữ liệu không hợp lệ!');
+        navigate('/payment');
       } finally {
         setIsLoading(false);
       }
     };
     loadPaymentData();
-  }, [id, agencies]);
+  }, [id, user, navigate]);
 
   // --- HANDLERS ---
   const handleAgencyChange = (e) => {
@@ -123,18 +142,19 @@ const EditPaymentReceipt = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const payments = JSON.parse(localStorage.getItem('payments') || '[]');
-      const idx = payments.findIndex((p) => p.payment_id === Number(id));
-      if (idx !== -1) {
-        payments[idx] = {
-          ...payments[idx],
-          ...formData,
-          agency_id: Number(formData.agency_id),
-          amount_collected: Number(formData.amount_collected)
-        };
-        localStorage.setItem('payments', JSON.stringify(payments));
+      // Kiểm tra trạng thái trước khi cập nhật
+      if (selectedAgency && selectedAgency.debt_amount < parseFloat(formData.amount_collected)) {
+        alert('Số tiền thu vượt quá nợ còn lại của đại lý!');
+        setIsSubmitting(false);
+        return;
       }
-      await new Promise(resolve => setTimeout(resolve, 1500)); 
+      // Gọi API cập nhật payment lên backend
+      await updatePayment(Number(id), {
+        agency_id: Number(formData.agency_id),
+        payment_date: formData.payment_date,
+        amount_collected: Number(formData.amount_collected),
+        note: formData.note
+      });
       alert('Cập nhật phiếu thu thành công!');
       navigate('/payment');
     } catch (error) {
@@ -195,31 +215,14 @@ const EditPaymentReceipt = () => {
               
               {/* Cột Trái: Form Nhập Liệu */}
               <div className="lg:col-span-3 space-y-6">
-                {/* Card 1: Chọn & Thông tin Đại lý */}
+                {/* Card 1: Thông tin Đại lý */}
                 <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-sm border border-slate-200/80">
                   <h2 className="text-xl font-bold text-blue-900 mb-6 flex items-center gap-3">
                     <Landmark className="h-6 w-6 text-blue-500" />
                     Thông tin Đại Lý
                   </h2>
                   <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-600 mb-1.5">Chọn đại lý <span className="text-red-500">*</span></label>
-                      <select
-                        name="agency_id"
-                        value={formData.agency_id}
-                        onChange={handleAgencyChange}
-                        className="w-full px-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-slate-800 shadow-sm transition-all duration-300"
-                        required
-                      >
-                        <option value="" disabled>Chọn một đại lý...</option>
-                        {agencies.map(agency => (
-                          <option key={agency.agency_id} value={agency.agency_id}>
-                            {agency.agency_name} - Nợ: {formatCurrency(agency.debt_amount)} VND
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
+                    {/* Bỏ dropdown chọn đại lý, chỉ hiển thị info */}
                     {selectedAgency && (
                       <div className="bg-gradient-to-r from-sky-50 to-blue-50 rounded-xl p-4 border border-sky-200/80 animate-fade-in">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
@@ -251,7 +254,7 @@ const EditPaymentReceipt = () => {
                       <label className="block text-sm font-medium text-slate-600 mb-1.5">Số tiền thu (VND) <span className="text-red-500">*</span></label>
                       <div className="relative">
                          <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500 font-semibold">₫</span>
-                        <input type="number" name="amount_collected" value={formData.amount_collected} onChange={handleChange} className="w-full pl-8 pr-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-slate-800 shadow-sm transition-all" placeholder="0" min="1" step="1000" max={selectedAgency?.debt_amount || undefined} required />
+                        <input type="number" name="amount_collected" value={formData.amount_collected} onChange={handleChange} className="w-full pl-8 pr-4 py-3 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500 text-slate-800 shadow-sm transition-all" placeholder="0" min="1" max={selectedAgency?.debt_amount || undefined} required />
                       </div>
                     </div>
                   </div>

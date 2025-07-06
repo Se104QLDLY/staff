@@ -48,4 +48,20 @@ export const createPayment = async (
 ): Promise<PaymentItem> => {
   const { data } = await axiosClient.post<PaymentItem>('/finance/payments/', payload);
   return data;
+};
+
+/**
+ * Lấy chi tiết một phiếu thu theo ID
+ */
+export const getPaymentById = async (id: number): Promise<PaymentItem> => {
+  const { data } = await axiosClient.get<PaymentItem>(`/finance/payments/${id}/`);
+  return data;
+};
+
+/**
+ * Cập nhật một phiếu thu theo ID
+ */
+export const updatePayment = async (id: number, payload: Partial<PaymentItem>): Promise<PaymentItem> => {
+  const { data } = await axiosClient.patch<PaymentItem>(`/finance/payments/${id}/`, payload);
+  return data;
 }; 

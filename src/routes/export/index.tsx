@@ -2,13 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Loading } from '../../components/common';
-import { Truck, ListChecks, DollarSign, BadgeCheck, BadgeAlert, Trash2, PlusCircle } from 'lucide-react';
-import { getIssues, deleteIssue, updateIssue, updateIssueStatus, getIssueById, getItemById } from '../../api/export.api';
+import { Truck, ListChecks, DollarSign, BadgeAlert, Trash2, PlusCircle } from 'lucide-react';
+import { getIssues, deleteIssue, updateIssueStatus, getIssueById, getItemById } from '../../api/export.api';
 import type { Issue } from '../../api/export.api';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchAssignedAgencies } from '../../api/staffAgency.api';
-import { getReceipts, createReceipt } from '../../api/receipt.api';
-import type { Receipt } from '../../api/receipt.api';
 
 interface ExportItem {
   id: number;
@@ -31,6 +29,11 @@ interface ExportRequest {
   creator: string;
 }
 
+interface AssignedAgency {
+  agency_id: number;
+  agency_name: string;
+}
+
 const ExportPage: React.FC = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,10 +43,14 @@ const ExportPage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<ExportItem | null>(null);
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const [exportItems, setExportItems] = useState<ExportItem[]>([]);
 
   const [exportRequests, setExportRequests] = useState<ExportRequest[]>([]);
+
+  const [assignedAgencies, setAssignedAgencies] = useState<AssignedAgency[]>([]);
 
   const [stockCheck, setStockCheck] = useState<Record<string, 'not_checked' | 'in_stock' | 'out_of_stock' | 'checking'>>({});
 
@@ -62,11 +69,15 @@ const ExportPage: React.FC = () => {
       if (!user) return;
       // Xác định danh sách agency staff được phân công
       let agencyIds: number[] = [];
+      let agencyList: AssignedAgency[] = [];
       if ((user as any).agency_id) {
         agencyIds = [(user as any).agency_id];
+        // Nếu user có agency_id thì lấy tên agency từ exportItems sau
       } else {
         const assigned = await fetchAssignedAgencies(user.id);
         agencyIds = assigned.map(a => a.agency_id);
+        agencyList = assigned.map(a => ({agency_id: a.agency_id, agency_name: a.agency_name}));
+        setAssignedAgencies(agencyList);
       }
       try {
         // Lọc các issue từ các agency đã phân công: chỉ processing và confirmed
@@ -79,51 +90,62 @@ const ExportPage: React.FC = () => {
         }
         const pendingIssues = allResults.filter(issue => issue.status === 'processing');
         const confirmedIssues = allResults.filter(issue => issue.status === 'confirmed');
-        // Map sang frontend shape
-        const mappedPending = pendingIssues.map(issue => ({
-          id: issue.issue_id,
-          code: `PX${issue.issue_id.toString().padStart(3, '0')}`,
-          agency: issue.agency_name,
-          exportDate: issue.issue_date,
-          totalAmount: Number(issue.total_amount),
-          creator: issue.user_name,
-          createdDate: issue.created_at,
-          updatedDate: issue.updated_at || issue.created_at,
-          status: 'pending' as const,
-        }));
-        const mappedConfirmed = confirmedIssues.map(issue => ({
-          id: issue.issue_id,
-          code: `PX${issue.issue_id.toString().padStart(3, '0')}`,
-          agency: issue.agency_name,
-          exportDate: issue.issue_date,
-          totalAmount: Number(issue.total_amount),
-          creator: issue.user_name,
-          createdDate: issue.created_at,
-          updatedDate: issue.updated_at || issue.created_at,
-          status: 'confirmed' as const,
-        }));
+        
+        // Map sang frontend shape với tính lại total từ details - tất cả từ bảng issue
+        const mappedPending = pendingIssues.map(issue => {
+          // Tính lại total từ details để đảm bảo đúng
+          const calculatedTotal = issue.details 
+            ? issue.details.reduce((sum, detail) => sum + (Number(detail.quantity) * Number(detail.unit_price)), 0)
+            : Number(issue.total_amount);
+          
+          return {
+            id: issue.issue_id,
+            code: `PX${issue.issue_id.toString().padStart(3, '0')}`,
+            agency: issue.agency_name || 'Unknown Agency',
+            exportDate: issue.issue_date,
+            totalAmount: calculatedTotal,
+            creator: issue.user_name || 'Unknown User',
+            createdDate: issue.created_at,
+            updatedDate: issue.created_at,
+            status: 'pending' as const,
+          };
+        });
+        
+        const mappedConfirmed = confirmedIssues.map(issue => {
+          // Tính lại total từ details để đảm bảo đúng
+          const calculatedTotal = issue.details 
+            ? issue.details.reduce((sum, detail) => sum + (Number(detail.quantity) * Number(detail.unit_price)), 0)
+            : Number(issue.total_amount);
+          
+          return {
+            id: issue.issue_id,
+            code: `PX${issue.issue_id.toString().padStart(3, '0')}`,
+            agency: issue.agency_name || 'Unknown Agency',
+            exportDate: issue.issue_date,
+            totalAmount: calculatedTotal,
+            creator: issue.user_name || 'Unknown User',
+            createdDate: issue.created_at,
+            updatedDate: issue.created_at,
+            status: 'confirmed' as const,
+          };
+        });
+        
+        // Đồng bộ hoàn toàn với trang chi tiết: chỉ dùng dữ liệu từ bảng issue
         setExportItems(mappedConfirmed);
         setExportRequests(mappedPending);
-        // Lấy danh sách receipts thật cho danh sách phiếu xuất
-        let receiptResults: Receipt[] = [];
-        if (agencyIds.length > 0) {
-          const receiptResponses = await Promise.all(
-            agencyIds.map(id => getReceipts({ agency_id: id }))
-          );
-          receiptResults = receiptResponses.flatMap(r => r.results);
+        
+        // Tạo danh sách agency unique từ tất cả items
+        const allItems = [...mappedConfirmed, ...mappedPending];
+        const uniqueAgencies: AssignedAgency[] = Array.from(new Set(allItems.map(item => item.agency)))
+          .map(agencyName => ({
+            agency_id: 0, // Không cần ID cho filter
+            agency_name: agencyName
+          }));
+        
+        // Nếu chưa có assignedAgencies thì set từ unique agencies
+        if (agencyList.length === 0) {
+          setAssignedAgencies(uniqueAgencies);
         }
-        const mappedReceipts = receiptResults.map(receipt => ({
-          id: receipt.receipt_id,
-          code: `PX${receipt.receipt_id.toString().padStart(3, '0')}`,
-          agency: receipt.agency_name,
-          exportDate: receipt.receipt_date,
-          totalAmount: Number(receipt.total_amount),
-          creator: receipt.user_name,
-          createdDate: receipt.created_at,
-          updatedDate: receipt.updated_at || receipt.created_at,
-          status: receipt.status === 'processing' ? 'pending' as const : 'confirmed' as const,
-        }));
-        setExportItems(mappedReceipts);
       } catch (error) {
         console.error('Error loading export page data:', error);
       }
@@ -152,9 +174,42 @@ const ExportPage: React.FC = () => {
     return matchesSearch && matchesAgency && matchesDateRange;
   });
 
+  // Filter logic cho exportRequests
+  const filteredRequests = exportRequests.filter(req => {
+    const matchesSearch = 
+      req.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.agency.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      req.creator.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesAgency = selectedAgency === 'all' || req.agency === selectedAgency;
+    const matchesDateRange = (() => {
+      if (!startDate && !endDate) return true;
+      const itemDate = new Date(req.exportDate);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      if (start && end) return itemDate >= start && itemDate <= end;
+      if (start) return itemDate >= start;
+      if (end) return itemDate <= end;
+      return true;
+    })();
+    return matchesSearch && matchesAgency && matchesDateRange;
+  });
+
   // Thống kê
   const totalExports = filteredItems.length;
   const totalAmount = filteredItems.reduce((sum, r) => sum + r.totalAmount, 0);
+
+  // Phân trang
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredItems.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+
+  const handlePageChange = (pageNumber: number) => setCurrentPage(pageNumber);
+
+  // Reset trang khi filter thay đổi
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedAgency, startDate, endDate]);
 
   const handleDeleteClick = (item: ExportItem) => {
     setItemToDelete(item);
@@ -190,46 +245,39 @@ const ExportPage: React.FC = () => {
     const req = exportRequests.find(r => r.id === id);
     if (!req) return;
     try {
-      // Confirm issue status
-      await updateIssueStatus(id, 'confirmed', 'Đã xác nhận xuất hàng và lập phiếu xuất');
-      // Fetch issue details
+      // Chỉ cập nhật issue status thành 'processing' - chờ agency xác nhận
+      await updateIssueStatus(id, 'processing', 'Đã xác nhận xuất hàng - chờ đại lý nhận hàng');
+      
+      // Cập nhật UI: chuyển từ requests sang exportItems
       const issueDetail = await getIssueById(req.id);
-      if (!issueDetail.details || issueDetail.details.length === 0) {
-        alert('Không có chi tiết để lập phiếu xuất.');
+      if (!issueDetail) {
+        alert('Không tìm thấy chi tiết phiếu xuất.');
         return;
       }
-      // Prepare receipt payload
-      const payload = {
-        agency_id: issueDetail.agency_id,
-        receipt_date: issueDetail.issue_date,
-        items: issueDetail.details.map(detail => ({
-          item_id: detail.item,
-          quantity: detail.quantity,
-          unit_price: Number(detail.unit_price),
-        })),
-      };
-      console.log('Creating receipt with payload:', payload);
-      // Create receipt
-      const newReceipt = await createReceipt(payload);
-      // Map to ExportItem for UI
+      
+      // Tính lại total từ details
+      const calculatedTotal = issueDetail.details 
+        ? issueDetail.details.reduce((sum, detail) => sum + (Number(detail.quantity) * Number(detail.unit_price)), 0)
+        : Number(issueDetail.total_amount);
+      
       const newExportItem: ExportItem = {
-        id: newReceipt.receipt_id,
-        code: `PX${newReceipt.receipt_id.toString().padStart(3, '0')}`,
-        agency: newReceipt.agency_name,
-        exportDate: newReceipt.receipt_date,
-        totalAmount: Number(newReceipt.total_amount),
-        creator: newReceipt.user_name,
-        createdDate: newReceipt.created_at,
-        updatedDate: newReceipt.updated_at || newReceipt.created_at,
-        status: 'confirmed',
+        id: issueDetail.issue_id,
+        code: `PX${issueDetail.issue_id.toString().padStart(3, '0')}`,
+        agency: issueDetail.agency_name || 'Unknown Agency',
+        exportDate: issueDetail.issue_date,
+        totalAmount: calculatedTotal,
+        creator: issueDetail.user_name || 'Unknown User',
+        createdDate: issueDetail.created_at,
+        updatedDate: issueDetail.created_at,
+        status: 'pending' as const, // Đang chờ agency xác nhận
       };
-      // Update lists
-      setExportItems(prev => [newExportItem, ...prev]);
-      setExportRequests(prev => prev.filter(r => r.id !== req.id));
-      alert(`Đã lập phiếu xuất ${newExportItem.code} thành công!`);
+      
+      // Cập nhật state
+      setExportItems(prev => [...prev, newExportItem]);
+      setExportRequests(prev => prev.filter(r => r.id !== id));
+      alert(`Đã lập phiếu xuất ${newExportItem.code} thành công! Chờ đại lý xác nhận.`);
     } catch (error: any) {
-      console.error('Error confirming and creating receipt:', error);
-      console.error('Response data:', error.response?.data);
+      console.error('Error confirming issue:', error);
       const errMsg = error.response?.data?.error || error.response?.data?.message || error.message;
       alert(`Có lỗi khi lập phiếu xuất: ${errMsg}`);
     }
@@ -394,8 +442,11 @@ const ExportPage: React.FC = () => {
               onChange={(e) => setSelectedAgency(e.target.value)}
             >
               <option value="all">Tất cả đại lý</option>
-              <option value="Đại lý A">Đại lý A</option>
-              <option value="Đại lý B">Đại lý B</option>
+              {assignedAgencies.map((agency) => (
+                <option key={agency.agency_name} value={agency.agency_name}>
+                  {agency.agency_name}
+                </option>
+              ))}
             </select>
             <input
               type="date"
@@ -429,7 +480,7 @@ const ExportPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-blue-100">
-                {filteredItems.map((item) => (
+                {currentItems.map((item) => (
                   <tr key={item.code} className="hover:bg-blue-50 transition-colors">
                     <td className="px-6 py-4 font-semibold text-gray-900 whitespace-nowrap flex items-center gap-2">
                       <Truck className="h-5 w-5 text-blue-400" /> {item.code}
@@ -451,13 +502,13 @@ const ExportPage: React.FC = () => {
                     <td className="px-6 py-4">
                       <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
                         <Link
-                          to={`/export/detail/${item.code}`}
+                          to={`/export/detail/${item.id}`}
                           className="px-2 sm:px-3 py-1 text-xs font-bold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors text-center whitespace-nowrap flex items-center gap-1"
                         >
                           <ListChecks className="h-4 w-4" /> Xem
                         </Link>
                         <Link
-                          to={`/export/edit/${item.code}`}
+                          to={`/export/edit/${item.id}`}
                           className="px-2 sm:px-3 py-1 text-xs font-bold text-green-600 hover:text-green-800 bg-green-50 hover:bg-green-100 rounded-lg transition-colors text-center whitespace-nowrap flex items-center gap-1"
                         >
                           <PlusCircle className="h-4 w-4" />
@@ -477,6 +528,49 @@ const ExportPage: React.FC = () => {
               </tbody>
             </table>
           </div>
+          
+          {/* Phân trang */}
+          {filteredItems.length > itemsPerPage && (
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-6 gap-4">
+              <div className="text-sm text-gray-600">
+                Hiển thị {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredItems.length)} trong tổng số {filteredItems.length} phiếu xuất
+              </div>
+              <nav className="flex items-center gap-1">
+                <button 
+                  onClick={() => handlePageChange(Math.max(1, currentPage - 1))} 
+                  disabled={currentPage === 1} 
+                  className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Trước
+                </button>
+                {[...Array(Math.min(5, totalPages))].map((_, index) => {
+                  const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + index;
+                  if (pageNum > totalPages) return null;
+                  return (
+                    <button 
+                      key={pageNum} 
+                      onClick={() => handlePageChange(pageNum)} 
+                      className={`px-3 py-2 text-sm border rounded-lg transition-colors ${
+                        currentPage === pageNum 
+                          ? 'bg-blue-600 text-white border-blue-600' 
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border-gray-200'
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                <button 
+                  onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))} 
+                  disabled={currentPage === totalPages} 
+                  className="px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Tiếp
+                </button>
+              </nav>
+            </div>
+          )}
+          
           {filteredItems.length === 0 && (
             <div className="text-center py-8">
               <p className="text-gray-500 text-lg">Không tìm thấy phiếu xuất nào.</p>
@@ -532,9 +626,9 @@ const ExportPage: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {exportRequests.length === 0 ? (
+                    {filteredRequests.length === 0 ? (
                       <tr><td colSpan={4} className="text-center py-4 text-gray-500">Không có yêu cầu nào.</td></tr>
-                    ) : exportRequests.map(req => (
+                    ) : filteredRequests.map(req => (
                       <tr key={req.code} className="border-b hover:bg-blue-50">
                         <td className="px-4 py-2 font-semibold">{req.code}</td>
                         <td className="px-4 py-2">{req.agency}</td>

@@ -4,6 +4,8 @@ import { agencyApi } from '../../api/agency.api';
 import { exportApi } from '../../api/export.api';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { fetchAssignedAgencies } from '../../api/staffAgency.api';
+import { useAuth } from '../../hooks/useAuth';
 
 interface Agency {
   agency_id: number;
@@ -30,6 +32,7 @@ interface ProductForm {
 
 const AddExportPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -48,11 +51,12 @@ const AddExportPage: React.FC = () => {
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [agenciesResponse, itemsResponse] = await Promise.all([
-          agencyApi.getAgencies(),
-          exportApi.getItems()
-        ]);
-        setAgencies(agenciesResponse.results || []);
+        let agenciesResponse: Agency[] = [];
+        if (user && user.id) {
+          agenciesResponse = await fetchAssignedAgencies(user.id);
+        }
+        const itemsResponse = await exportApi.getItems();
+        setAgencies(agenciesResponse || []);
         setItems(itemsResponse.results || []);
       } catch (error) {
         console.error('Error loading data:', error);
@@ -61,7 +65,7 @@ const AddExportPage: React.FC = () => {
     };
 
     loadData();
-  }, []);
+  }, [user]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;

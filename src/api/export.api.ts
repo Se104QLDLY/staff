@@ -4,14 +4,13 @@ export interface Issue {
   issue_id: number;
   issue_date: string;
   agency_id: number;
-  agency_name: string;
+  agency_name?: string;
   user_id: number;
-  user_name: string;
+  user_name?: string;
   total_amount: number;
-  paid_amount: number;
-  status: string;
+  status: 'processing' | 'confirmed' | 'postponed' | 'cancelled';
+  status_reason?: string;
   created_at: string;
-  updated_at?: string;
   debt_impact?: {
     previous_debt: number;
     issue_amount: number;

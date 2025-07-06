@@ -238,7 +238,6 @@ const PaymentPage: React.FC = () => {
   const [recordToDelete, setRecordToDelete] = useState<PaymentRecord | null>(null);
   const [recordToView, setRecordToView] = useState<PaymentRecord | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState<'table' | 'card'>('table');
   const itemsPerPage = 8;
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [paymentRecords, setPaymentRecords] = useState<PaymentRecord[]>([]);
@@ -329,6 +328,10 @@ const PaymentPage: React.FC = () => {
   };
 
   const handleEditClick = (record: PaymentRecord) => {
+    if (record.status !== 'Chưa thanh toán') {
+      setToast({ type: 'error', message: 'Chỉ có thể chỉnh sửa phiếu thu ở trạng thái Chưa thanh toán!' });
+      return;
+    }
     window.location.href = `/payment/edit/${record.id}`;
   };
 
@@ -391,75 +394,63 @@ const PaymentPage: React.FC = () => {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setViewMode(viewMode === 'table' ? 'card' : 'table')}
-                  className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-2"
-                >
-                  {viewMode === 'table' ? <LayoutGrid size={16}/> : <List size={16}/>} {viewMode === 'table' ? 'Card View' : 'Table View'}
-                </button>
-              </div>
             </div>
           </div>
           {/* Bảng/Card hiển thị phiếu thu */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-            {viewMode === 'table' ? (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1"><ListChecks className="h-5 w-5" />Mã phiếu</span></th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1"><CalendarDays className="h-5 w-5" />Ngày thu</span></th>
-                      <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1"><Users className="h-5 w-5" />Đại lý</span></th>
-                      <th className="text-right py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1 justify-end"><DollarSign className="h-5 w-5" />Số tiền</span></th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1 justify-center"><Users className="h-5 w-5" />Trạng thái</span></th>
-                      <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1 justify-center"><MoreVertical className="h-5 w-5" />Thao tác</span></th>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1"><ListChecks className="h-5 w-5" />Mã phiếu</span></th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1"><CalendarDays className="h-5 w-5" />Ngày thu</span></th>
+                    <th className="text-left py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1"><Users className="h-5 w-5" />Đại lý</span></th>
+                    <th className="text-right py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1 justify-end"><DollarSign className="h-5 w-5" />Số tiền</span></th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1 justify-center"><Users className="h-5 w-5" />Trạng thái</span></th>
+                    <th className="text-center py-3 px-4 font-semibold text-gray-700 text-sm"><span className="flex items-center gap-1 justify-center"><MoreVertical className="h-5 w-5" />Thao tác</span></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {currentRecords.map((record) => (
+                    <tr key={record.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="py-3 px-4"><div className="flex items-center gap-2"><div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"><Receipt className="w-4 h-4 text-blue-600" /></div><span className="font-semibold text-blue-700">{record.id}</span></div></td>
+                      <td className="py-3 px-4 text-sm text-gray-600">{record.paymentDate}</td>
+                      <td className="py-3 px-4 text-gray-700"><div className="font-semibold">{record.agency}</div><div className="text-xs text-gray-500 flex items-center gap-1"><Phone size={14}/> {record.phone}</div></td>
+                      <td className="py-3 px-4 text-right"><span className="font-bold text-green-600">{record.amount.toLocaleString('vi-VN')} VNĐ</span></td>
+                      <td className="py-3 px-4 text-center">
+                        {record.status === 'Đã thanh toán' ? (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-lg shadow-sm">
+                            <CheckCircle className="h-4 w-4" /> Đã thanh toán
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-lg shadow-sm">
+                            <Clock className="h-4 w-4" /> Chưa thanh toán
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => handleEditClick(record)}
+                            className="flex items-center justify-center gap-1 px-3 py-2 bg-blue-100 text-blue-800 font-semibold rounded-lg hover:bg-blue-200 transition-colors shadow-sm"
+                            title="Sửa phiếu thu"
+                          >
+                            <Pencil className="h-5 w-5" /> Sửa
+                          </button>
+                          <button
+                            onClick={() => handleDeleteClick(record)}
+                            className="flex items-center justify-center gap-1 px-3 py-2 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition-colors shadow-sm"
+                            title="Xóa phiếu thu"
+                          >
+                            <Trash2 className="h-5 w-5" /> Xóa
+                          </button>
+                        </div>
+                      </td>
                     </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {currentRecords.map((record) => (
-                      <tr key={record.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="py-3 px-4"><div className="flex items-center gap-2"><div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"><Receipt className="w-4 h-4 text-blue-600" /></div><span className="font-semibold text-blue-700">{record.id}</span></div></td>
-                        <td className="py-3 px-4 text-sm text-gray-600">{record.paymentDate}</td>
-                        <td className="py-3 px-4 text-gray-700"><div className="font-semibold">{record.agency}</div><div className="text-xs text-gray-500 flex items-center gap-1"><Phone size={14}/> {record.phone}</div></td>
-                        <td className="py-3 px-4 text-right"><span className="font-bold text-green-600">{record.amount.toLocaleString('vi-VN')} VNĐ</span></td>
-                        <td className="py-3 px-4 text-center">
-                          {record.status === 'Đã thanh toán' ? (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 text-sm font-semibold rounded-lg shadow-sm">
-                              <CheckCircle className="h-4 w-4" /> Đã thanh toán
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-3 py-1 bg-yellow-100 text-yellow-800 text-sm font-semibold rounded-lg shadow-sm">
-                              <Clock className="h-4 w-4" /> Chưa thanh toán
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <div className="flex items-center justify-center gap-2">
-                            <button
-                              onClick={() => handleEditClick(record)}
-                              className="flex items-center justify-center gap-1 px-3 py-2 bg-blue-100 text-blue-800 font-semibold rounded-lg hover:bg-blue-200 transition-colors shadow-sm"
-                              title="Sửa phiếu thu"
-                            >
-                              <Pencil className="h-5 w-5" /> Sửa
-                            </button>
-                            <button
-                              onClick={() => handleDeleteClick(record)}
-                              className="flex items-center justify-center gap-1 px-3 py-2 bg-red-100 text-red-700 font-semibold rounded-lg hover:bg-red-200 transition-colors shadow-sm"
-                              title="Xóa phiếu thu"
-                            >
-                              <Trash2 className="h-5 w-5" /> Xóa
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <div className="p-4"><div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">{currentRecords.map((record) => (<PaymentCard key={record.id} record={record} onDelete={handleDeleteClick} onViewDetail={handleViewDetail} onEdit={handleEditClick} />))}</div></div>
-            )}
+                  ))}
+                </tbody>
+              </table>
+            </div>
             {filteredRecords.length === 0 && (
               <div className="text-center py-12"><div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><Search className="w-6 h-6 text-gray-400" /></div><p className="text-gray-500 text-lg">Không tìm thấy phiếu thu nào</p><p className="text-gray-400 text-sm">Thử thay đổi từ khóa tìm kiếm</p></div>
             )}

@@ -2,9 +2,9 @@ import { Routes, Route } from 'react-router-dom';
 import { LoginPage } from '../pages/LoginPage';
 import Register from './auth/Register';
 import ForgotPassword from './auth/ForgotPassword';
-import ImportPage from './import';
+import ImportManagementPage from './import';
 import AddImportPage from './import/add';
-import ViewImportPage from './import/view';
+import ViewImportPage from './import/view.tsx';
 import EditImportPage from './import/edit';
 import ExportPage from './export';
 import ExportDetailPage from './export/detail';
@@ -41,7 +41,7 @@ const AppRoutes = () => {
         <Route path="/agencies/view/:id" element={<ViewAgencyPage />} />
         <Route path="/agencies/edit/:id" element={<EditAgencyPage />} />
         
-        <Route path="/import" element={<ImportPage />} />
+        <Route path="/import" element={<ImportManagementPage />} />
         <Route path="/import/add" element={<AddImportPage />} />
         <Route path="/import/view/:id" element={<ViewImportPage />} />
         <Route path="/import/edit/:id" element={<EditImportPage />} />

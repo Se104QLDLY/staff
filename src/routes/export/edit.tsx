@@ -1,15 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useForm, useFieldArray, Controller, useController } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
-import { FileText, Calendar, DollarSign, Plus, Trash2, Save, ArrowLeft, ChevronDown, CheckCircle, AlertTriangle, XCircle, User } from 'lucide-react';
-
-// --- Mock Components for Preview ---
-// In a real app, you would use: import { Link, useNavigate, useParams } from 'react-router-dom';
-const DashboardLayout = ({ children }) => <div className="antialiased">{children}</div>;
-const Link = ({ to, children, className }) => <a href={to} className={className}>{children}</a>;
-const useNavigate = () => (path) => console.log(`Navigating to ${path}`);
-const useParams = () => ({ id: 'PX002' });
+import { FileText, Calendar, DollarSign, Plus, Trash2, Save, ArrowLeft, CheckCircle, AlertTriangle, XCircle, User } from 'lucide-react';
+import { exportApi } from '../../api/export.api';
+import { getIssueById } from '../../api/export.api';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { DashboardLayout } from '../../components/layout/DashboardLayout';
 
 // --- Form Schema Definition ---
 const productSchema = yup.object({
@@ -22,9 +19,9 @@ const productSchema = yup.object({
 const schema = yup.object({
   agency: yup.string().required('Đại lý là bắt buộc'),
   exportDate: yup.string().required('Ngày xuất hàng là bắt buộc'),
-  note: yup.string(),
+  note: yup.string().default(''),
   products: yup.array().of(productSchema).min(1, 'Phải có ít nhất một sản phẩm').required(),
-  status: yup.mixed<'Hoàn thành' | 'Đang xử lý' | 'Hủy'>().oneOf(['Hoàn thành', 'Đang xử lý', 'Hủy']).required('Trạng thái là bắt buộc'),
+  status: yup.mixed<'processing' | 'confirmed' | 'postponed' | 'cancelled'>().oneOf(['processing', 'confirmed', 'postponed', 'cancelled']).required('Trạng thái là bắt buộc'),
 });
 
 // --- Type Definitions ---
@@ -33,14 +30,15 @@ interface ExportProduct {
   unit: string;
   quantity: number;
   unitPrice: number;
+  item_id?: number; // Add for updating
 }
 
 interface ExportFormData {
   agency: string;
   exportDate: string;
-  note?: string;
+  note: string;
   products: ExportProduct[];
-  status: 'Hoàn thành' | 'Đang xử lý' | 'Hủy';
+  status: 'processing' | 'confirmed' | 'postponed' | 'cancelled';
 }
 
 // --- Helper Components & Functions ---
@@ -59,7 +57,19 @@ const CustomStyles = () => (
 );
 
 
-const FormInput = ({ label, name, register, error, icon, ...props }) => (
+const ReadOnlyField = ({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) => (
+    <div>
+        <label className="block text-sm font-medium text-zinc-600 mb-1.5">{label}</label>
+        <div className="relative">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-400">{icon}</span>
+            <div className="w-full pl-11 pr-4 py-2.5 bg-zinc-50 border border-zinc-200 rounded-lg text-zinc-800 font-medium">
+                {value}
+            </div>
+        </div>
+    </div>
+);
+
+const FormInput = ({ label, name, register, error, icon, ...props }: any) => (
     <div>
         <label htmlFor={name} className="block text-sm font-medium text-zinc-600 mb-1.5">{label}</label>
         <div className="relative">
@@ -70,130 +80,160 @@ const FormInput = ({ label, name, register, error, icon, ...props }) => (
     </div>
 );
 
-const FormSelect = ({ label, name, control, error, options, icon, placeholder }) => (
-     <div>
-        <label htmlFor={name} className="block text-sm font-medium text-zinc-600 mb-1.5">{label}</label>
-        <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3.5 text-zinc-400">{icon}</span>
-            <Controller
-                name={name}
-                control={control}
-                render={({ field }) => (
-                    <select {...field} id={name} className={`w-full appearance-none pl-11 pr-10 py-2.5 bg-white border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-zinc-800 shadow-sm transition-all duration-200 ${error ? 'border-red-500 ring-red-200' : ''}`}>
-                        <option value="">{placeholder}</option>
-                        {options.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                    </select>
-                )}
-            />
-            <span className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-zinc-400"><ChevronDown size={20}/></span>
-        </div>
-        {error && <p className="text-red-600 text-xs mt-1.5">{error.message}</p>}
-    </div>
-);
-
-const getStatusChip = (status) => {
+const getStatusChip = (status: any) => {
     switch (status) {
-        case 'Hoàn thành': return <span className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full"><CheckCircle size={14}/>{status}</span>;
-        case 'Đang xử lý': return <span className="flex items-center gap-1.5 text-xs font-semibold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full"><AlertTriangle size={14}/>{status}</span>;
-        case 'Hủy': return <span className="flex items-center gap-1.5 text-xs font-semibold bg-red-100 text-red-700 px-2.5 py-1 rounded-full"><XCircle size={14}/>{status}</span>;
+        case 'processing': return <span className="flex items-center gap-1.5 text-xs font-semibold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full"><AlertTriangle size={14}/>Đang xử lý</span>;
+        case 'confirmed': return <span className="flex items-center gap-1.5 text-xs font-semibold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full"><CheckCircle size={14}/>Đã xác nhận</span>;
+        case 'postponed': return <span className="flex items-center gap-1.5 text-xs font-semibold bg-yellow-100 text-yellow-700 px-2.5 py-1 rounded-full"><AlertTriangle size={14}/>Tạm hoãn</span>;
+        case 'cancelled': return <span className="flex items-center gap-1.5 text-xs font-semibold bg-red-100 text-red-700 px-2.5 py-1 rounded-full"><XCircle size={14}/>Đã hủy</span>;
         default: return null;
     }
 };
 
-const StatusSelector = ({ control, name, error, options, label, placeholder }) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const { field } = useController({ name, control });
-    const wrapperRef = useRef(null);
-
-    useEffect(() => {
-        function handleClickOutside(event) {
-            if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-                setIsOpen(false);
-            }
-        }
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [wrapperRef]);
-
-    return (
-        <div ref={wrapperRef}>
-             <label htmlFor={name} className="block text-sm font-medium text-zinc-600 mb-1.5">{label}</label>
-            <div className="relative">
-                <button
-                    type="button"
-                    id={name}
-                    onClick={() => setIsOpen(!isOpen)}
-                    className={`w-full flex items-center justify-between text-left px-3.5 py-2 bg-white border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm transition-all duration-200 ${error ? 'border-red-500 ring-red-200' : ''}`}
-                >
-                    <div className="flex-grow">
-                        {getStatusChip(field.value) || <span className="text-zinc-400">{placeholder}</span>}
-                    </div>
-                    <ChevronDown size={20} className={`text-zinc-400 transition-transform duration-300 ease-in-out ${isOpen ? 'rotate-180' : ''}`} />
-                </button>
-                 {isOpen && (
-                    <ul className="absolute z-20 w-full mt-1.5 bg-white border border-zinc-200 rounded-lg shadow-xl overflow-hidden animate-fade-in-down">
-                        {options.map((opt) => (
-                            <li
-                                key={opt.value}
-                                onMouseDown={(e) => {
-                                    e.preventDefault();
-                                    field.onChange(opt.value);
-                                    setIsOpen(false);
-                                }}
-                                className="px-3.5 py-2.5 hover:bg-blue-50 cursor-pointer flex items-center text-sm"
-                            >
-                                {getStatusChip(opt.value)}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </div>
-            {error && <p className="text-red-600 text-xs mt-1.5">{error.message}</p>}
+const ReadOnlyStatusField = ({ label, status }: { label: string; status: string }) => (
+    <div>
+        <label className="block text-sm font-medium text-zinc-600 mb-1.5">{label}</label>
+        <div className="w-full p-3 bg-zinc-50 border border-zinc-200 rounded-lg">
+            {getStatusChip(status)}
         </div>
-    );
-};
+    </div>
+);
 
 
 // --- Main Page Component ---
 const EditExportPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
-    
-    const agencies = [ { value: 'DL001', label: 'DL001 - Đại lý Minh Anh' }, { value: 'DL002', label: 'DL002 - Đại lý Thành Công' }, { value: 'DL003', label: 'DL003 - Đại lý Hồng Phúc' }];
-    const statusOptions = [{value: 'Hoàn thành', label: 'Hoàn thành'}, {value: 'Đang xử lý', label: 'Đang xử lý'}, {value: 'Hủy', label: 'Hủy'}];
-    const existingData = {
-        agency: 'DL001',
-        exportDate: '2024-01-15',
-        note: 'Xuất hàng theo đơn đặt hàng tháng 1/2024',
-        status: 'Hoàn thành',
-        products: [
-            { productName: 'Nước tăng lực XYZ', unit: 'Thùng', quantity: 80, unitPrice: 150000 },
-            { productName: 'Bánh quy ABC', unit: 'Hộp', quantity: 120, unitPrice: 25000 }
-        ]
-    };
+    const [loading, setLoading] = useState(true);
+    const [currentAgencyName, setCurrentAgencyName] = useState('');
+    const [currentStatus, setCurrentStatus] = useState('processing');
+    const [defaultValues, setDefaultValues] = useState<ExportFormData | null>(null);
+
+    useEffect(() => {
+        async function fetchData() {
+            if (!id) return;
+            
+            setLoading(true);
+            try {
+                console.log('Fetching data for ID:', id);
+                
+                // Lấy dữ liệu phiếu xuất từ Issue API
+                const issueId = Number(id);
+                console.log('Parsed issue ID:', issueId);
+                
+                if (isNaN(issueId) || issueId <= 0) {
+                    throw new Error('ID phiếu xuất không hợp lệ');
+                }
+                
+                console.log('Calling getIssueById with ID:', issueId);
+                const issue = await getIssueById(issueId);
+                console.log('Issue loaded:', issue);
+                
+                if (!issue) {
+                    throw new Error('Không tìm thấy phiếu xuất');
+                }
+                
+                // Lưu thông tin agency và status hiện tại
+                setCurrentAgencyName(issue.agency_name || '');
+                setCurrentStatus(issue.status || 'processing');
+                
+                if (!issue.details || !Array.isArray(issue.details)) {
+                    console.warn('Issue details not found or not array:', issue.details);
+                    issue.details = [];
+                }
+                
+                // Lấy thông tin items để có unit_name
+                console.log('Loading items for unit names...');
+                const itemsResponse = await exportApi.getItems({ limit: 1000 });
+                console.log('Items response:', itemsResponse);
+                
+                if (!itemsResponse.results || !Array.isArray(itemsResponse.results)) {
+                    console.warn('Items response invalid, using empty array');
+                    itemsResponse.results = [];
+                }
+                
+                const itemsMap = new Map(itemsResponse.results.map(item => [item.item_id, item]));
+                
+                const defaultData = {
+                    agency: issue.agency_id ? issue.agency_id.toString() : '',
+                    exportDate: issue.issue_date || '',
+                    note: issue.status_reason || '', // Sử dụng status_reason thay vì note
+                    status: (issue.status as 'processing' | 'confirmed' | 'postponed' | 'cancelled') || 'processing',
+                    products: (issue.details || []).map(d => {
+                        const item = itemsMap.get(d.item);
+                        return {
+                            productName: d.item_name || '',
+                            unit: item?.unit_name || 'N/A', // Lấy unit_name từ Item
+                            quantity: d.quantity || 0,
+                            unitPrice: Number(d.unit_price) || 0,
+                            item_id: d.item // dùng để update
+                        };
+                    })
+                };
+                
+                console.log('Default data prepared:', defaultData);
+                setDefaultValues(defaultData);
+            } catch (err) {
+                console.error('Error fetching data:', err);
+                const errorMessage = err instanceof Error ? err.message : 'Lỗi không xác định';
+                alert('Không thể tải dữ liệu phiếu xuất! Lỗi: ' + errorMessage);
+            } finally {
+                setLoading(false);
+            }
+        }
+        fetchData();
+    }, [id]);
+
+    const form = useForm<ExportFormData>({
+        resolver: yupResolver(schema),
+        defaultValues: {
+            agency: '',
+            exportDate: '',
+            note: '',
+            status: 'processing' as const,
+            products: []
+        }
+    });
 
     const {
         register,
         handleSubmit,
         control,
         watch,
+        reset,
         formState: { errors, isSubmitting },
-    } = useForm({
-        resolver: yupResolver(schema),
-        defaultValues: existingData
-    });
+    } = form;
 
-    const { fields, append, remove } = useFieldArray({ control, name: "products" });
-    const watchedProducts = watch("products");
+    useEffect(() => {
+        if (defaultValues) {
+            reset(defaultValues);
+        }
+    }, [defaultValues]); // Chỉ dependency defaultValues để tránh vòng lặp
 
-    const onSubmit = async (data) => {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        console.log('Updated export data:', data);
-        alert('Phiếu xuất đã được cập nhật thành công!');
-        navigate('/export');
+    const { fields, append, remove } = useFieldArray({ control, name: 'products' });
+    const watchedProducts = watch('products');
+
+    const onSubmit = async (data: ExportFormData) => {
+        try {
+            const issueId = Number(id);
+            if (isNaN(issueId) || issueId <= 0) {
+                throw new Error('ID phiếu xuất không hợp lệ');
+            }
+            
+            // Cập nhật trạng thái issue sử dụng API status update
+            await exportApi.updateIssueStatus(issueId, data.status, data.note);
+            
+            alert('Phiếu xuất đã được cập nhật thành công!');
+            navigate('/export');
+        } catch (err) {
+            console.error('Error updating issue:', err);
+            alert('Có lỗi xảy ra khi cập nhật phiếu xuất!');
+        }
     };
 
     const calculateTotal = () => watchedProducts?.reduce((total, p) => total + (p.quantity || 0) * (p.unitPrice || 0), 0) || 0;
+
+    if (loading) return <DashboardLayout><div className="p-8 text-center">Đang tải dữ liệu...</div></DashboardLayout>;
 
     return (
         <DashboardLayout>
@@ -225,7 +265,7 @@ const EditExportPage = () => {
                             <div className="bg-white rounded-xl p-6 shadow-sm border border-zinc-200/80">
                                 <h2 className="text-xl font-bold text-zinc-800 mb-6">Thông tin chung</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
-                                    <FormSelect label="Đại lý" name="agency" control={control} error={errors.agency} options={agencies} placeholder="Chọn đại lý" icon={<User size={18}/>} />
+                                    <ReadOnlyField label="Đại lý" value={currentAgencyName} icon={<User size={18}/>} />
                                     <FormInput label="Ngày xuất hàng" name="exportDate" register={register} error={errors.exportDate} type="date" icon={<Calendar size={18}/>} />
                                 </div>
                             </div>
@@ -285,7 +325,7 @@ const EditExportPage = () => {
                                                     </td>
                                                     <td className="px-6 py-4 text-right">
                                                         <span className="font-semibold text-blue-600">
-                                                          {(watchedProducts[index]?.quantity * watchedProducts[index]?.unitPrice || 0).toLocaleString('vi-VN')}
+                                                          {((watchedProducts[index]?.quantity || 0) * (watchedProducts[index]?.unitPrice || 0)).toLocaleString('vi-VN')}
                                                         </span>
                                                         <span className="text-zinc-500 ml-1">VND</span>
                                                     </td>
@@ -307,7 +347,7 @@ const EditExportPage = () => {
                                 <div className="bg-white rounded-xl p-6 shadow-sm border border-zinc-200/80">
                                       <h3 className="text-xl font-bold text-zinc-800 mb-6">Hoàn tất & Ghi chú</h3>
                                       <div className="space-y-5">
-                                        <StatusSelector label="Trạng thái phiếu" name="status" control={control} error={errors.status} options={statusOptions} placeholder="Chọn trạng thái" />
+                                        <ReadOnlyStatusField label="Trạng thái phiếu" status={currentStatus} />
                                         <div>
                                             <label htmlFor="note" className="block text-sm font-medium text-zinc-600 mb-1.5">Ghi chú</label>
                                             <textarea id="note" {...register('note')} rows={3} placeholder="Thêm ghi chú cho phiếu xuất..." className="w-full p-3 bg-white border border-zinc-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-zinc-800 shadow-sm transition-all duration-200"></textarea>

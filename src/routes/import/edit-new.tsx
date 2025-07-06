@@ -75,8 +75,6 @@ const EditImportPage: React.FC = () => {
     if (items.length === 0) return;
     
     const firstItem = items[0];
-    if (!firstItem) return;
-    
     const newItem = {
       item_id: firstItem.item_id,
       item_name: firstItem.item_name,

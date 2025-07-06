@@ -1,65 +1,92 @@
-import React from 'react';
-import { Link, useParams } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
-import { Package, Calendar, User, FileText, Edit, ArrowLeft, Printer, Trash2 } from 'lucide-react';
-
-interface ImportProduct {
-  id: string;
-  productName: string;
-  unit: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-}
-
-interface ImportRecord {
-  id: string;
-  agency: string;
-  agencyCode: string;
-  importDate: string;
-  totalAmount: number;
-  creator: string;
-  createdDate: string;
-  updatedDate: string;
-  note?: string;
-  products: ImportProduct[];
-  status: 'Hoàn thành' | 'Đang xử lý' | 'Hủy';
-}
+import { ArrowLeft, Package, Calendar, User, FileText, Edit3, Trash2 } from 'lucide-react';
+import { getReceiptById, deleteReceipt, type Receipt } from '../../api/receipt.api';
 
 const ViewImportPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [receipt, setReceipt] = useState<Receipt | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
-  // Mock data - trong thực tế sẽ fetch từ API
-  const importRecord: ImportRecord = {
-    id: id || 'PN001',
-    agency: 'Đại lý Minh Anh',
-    agencyCode: 'DL001',
-    importDate: '2024-01-15',
-    totalAmount: 15000000,
-    creator: 'Nguyễn Văn A',
-    createdDate: '2024-01-15',
-    updatedDate: '2024-01-15',
-    note: 'Nhập hàng theo đơn đặt hàng tháng 1/2024',
-    status: 'Hoàn thành',
-    products: [
-      {
-        id: '1',
-        productName: 'Sản phẩm A',
-        unit: 'Thùng',
-        quantity: 100,
-        unitPrice: 120000,
-        totalPrice: 12000000
-      },
-      {
-        id: '2',
-        productName: 'Sản phẩm B',
-        unit: 'Hộp',
-        quantity: 150,
-        unitPrice: 20000,
-        totalPrice: 3000000
+  useEffect(() => {
+    const fetchReceipt = async () => {
+      if (!id) return;
+      
+      try {
+        setLoading(true);
+        const receiptData = await getReceiptById(parseInt(id));
+        setReceipt(receiptData);
+      } catch (err) {
+        setError('Không thể tải thông tin phiếu nhập');
+        console.error('Error fetching receipt:', err);
+      } finally {
+        setLoading(false);
       }
-    ]
+    };
+
+    fetchReceipt();
+  }, [id]);
+
+  const handleDeleteReceipt = async () => {
+    if (!receipt) return;
+    
+    try {
+      setDeleting(true);
+      await deleteReceipt(receipt.receipt_id);
+      navigate('/import');
+    } catch (err) {
+      setError('Không thể xóa phiếu nhập');
+      console.error('Error deleting receipt:', err);
+    } finally {
+      setDeleting(false);
+      setShowDeleteModal(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="bg-zinc-50 font-sans p-4 sm:p-6 lg:p-8 min-h-screen">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-zinc-600">Đang tải thông tin phiếu nhập...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (error || !receipt) {
+    return (
+      <DashboardLayout>
+        <div className="bg-zinc-50 font-sans p-4 sm:p-6 lg:p-8 min-h-screen">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <p className="text-red-600 mb-4">{error || 'Không tìm thấy phiếu nhập'}</p>
+                <Link 
+                  to="/import" 
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <ArrowLeft size={16} />
+                  Quay lại
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -70,8 +97,8 @@ const ViewImportPage: React.FC = () => {
     }
   };
 
-  // Tính tổng số lượng
-  const totalQuantity = importRecord.products.reduce((sum, product) => sum + product.quantity, 0);
+  // Tính tổng số lượng từ details
+  const totalQuantity = receipt.details?.reduce((sum: number, detail) => sum + detail.quantity, 0) || 0;
 
   return (
     <DashboardLayout>
@@ -85,21 +112,30 @@ const ViewImportPage: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-4xl font-bold text-zinc-800">Chi tiết Phiếu Nhập</h1>
-                <p className="text-zinc-500 text-base mt-1">Thông tin chi tiết phiếu nhập mã <span className="font-semibold text-zinc-600">#{id}</span></p>
+                <p className="text-zinc-500 text-base mt-1">Thông tin chi tiết phiếu nhập mã <span className="font-semibold text-zinc-600">#{receipt.receipt_id}</span></p>
               </div>
             </div>
             <div className="flex items-center gap-3 flex-shrink-0">
               <Link 
-                to={`/import/edit/${importRecord.id}`}
+                to={`/import/edit/${receipt.receipt_id}`}
                 className="flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 font-semibold gap-2 text-sm shadow-sm hover:shadow-md shadow-blue-500/20"
               >
-                <Edit size={16} /><span>Chỉnh sửa</span>
+                <Edit3 size={16} />
+                <span>Chỉnh sửa</span>
               </Link>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="flex items-center justify-center px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all duration-200 font-semibold gap-2 text-sm shadow-sm hover:shadow-md shadow-red-500/20"
+              >
+                <Trash2 size={16} />
+                <span>Xóa</span>
+              </button>
               <Link 
                 to="/import" 
                 className="flex items-center justify-center px-4 py-2.5 border border-zinc-300 text-zinc-700 rounded-lg hover:bg-zinc-100 hover:border-zinc-400 transition-all duration-200 font-semibold gap-2 text-sm"
               >
-                <ArrowLeft size={16} /><span>Quay lại</span>
+                <ArrowLeft size={16} />
+                <span>Quay lại</span>
               </Link>
             </div>
           </div>
@@ -113,7 +149,7 @@ const ViewImportPage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm text-zinc-500 font-medium">Mã phiếu nhập</p>
-                  <p className="text-lg font-semibold text-zinc-800">{importRecord.id}</p>
+                  <p className="text-lg font-semibold text-zinc-800">#{receipt.receipt_id}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -122,7 +158,7 @@ const ViewImportPage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm text-zinc-500 font-medium">Ngày lập phiếu</p>
-                  <p className="text-lg font-semibold text-zinc-800">{new Date(importRecord.importDate).toLocaleDateString('vi-VN')}</p>
+                  <p className="text-lg font-semibold text-zinc-800">{new Date(receipt.receipt_date).toLocaleDateString('vi-VN')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -131,7 +167,7 @@ const ViewImportPage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm text-zinc-500 font-medium">Người tạo</p>
-                  <p className="text-lg font-semibold text-zinc-800">{importRecord.creator}</p>
+                  <p className="text-lg font-semibold text-zinc-800">{receipt.user_name}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -140,8 +176,8 @@ const ViewImportPage: React.FC = () => {
                 </div>
                 <div>
                   <p className="text-sm text-zinc-500 font-medium">Trạng thái</p>
-                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(importRecord.status)}`}>
-                    {importRecord.status}
+                  <span className={`px-3 py-1 rounded-full text-sm font-semibold ${getStatusColor(receipt.status)}`}>
+                    {receipt.status}
                   </span>
                 </div>
               </div>
@@ -162,21 +198,19 @@ const ViewImportPage: React.FC = () => {
                   <tr>
                     <th className="px-6 py-4 font-semibold text-center w-16">STT</th>
                     <th className="px-6 py-4 font-semibold min-w-[200px]">Mặt hàng</th>
-                    <th className="px-6 py-4 font-semibold min-w-[120px]">Đơn vị tính</th>
                     <th className="px-6 py-4 font-semibold text-center w-28">Số lượng</th>
                     <th className="px-6 py-4 font-semibold w-40">Đơn giá</th>
                     <th className="px-6 py-4 font-semibold text-right w-48">Thành tiền</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200">
-                  {importRecord.products.map((product, idx) => (
-                    <tr key={product.id} className="hover:bg-zinc-50/50 transition-colors duration-150">
+                  {receipt.details?.map((detail, idx) => (
+                    <tr key={detail.receipt_detail_id} className="hover:bg-zinc-50/50 transition-colors duration-150">
                       <td className="px-6 py-4 text-center font-medium text-zinc-500">{idx + 1}</td>
-                      <td className="px-6 py-4 font-semibold text-zinc-800">{product.productName}</td>
-                      <td className="px-6 py-4 text-zinc-600">{product.unit}</td>
-                      <td className="px-6 py-4 text-center text-zinc-700">{product.quantity.toLocaleString('vi-VN')}</td>
-                      <td className="px-6 py-4 text-zinc-700">{product.unitPrice.toLocaleString('vi-VN')} VND</td>
-                      <td className="px-6 py-4 text-right font-semibold text-blue-600">{product.totalPrice.toLocaleString('vi-VN')} VND</td>
+                      <td className="px-6 py-4 font-semibold text-zinc-800">{detail.item_name}</td>
+                      <td className="px-6 py-4 text-center text-zinc-700">{detail.quantity.toLocaleString('vi-VN')}</td>
+                      <td className="px-6 py-4 text-zinc-700">{parseFloat(detail.unit_price).toLocaleString('vi-VN')} VND</td>
+                      <td className="px-6 py-4 text-right font-semibold text-blue-600">{parseFloat(detail.line_total).toLocaleString('vi-VN')} VND</td>
                     </tr>
                   ))}
                 </tbody>
@@ -191,23 +225,49 @@ const ViewImportPage: React.FC = () => {
               <div className="bg-gradient-to-br from-blue-500 to-sky-500 text-white rounded-xl p-6 shadow-lg shadow-blue-500/20">
                 <div className="flex justify-between items-center mb-2">
                   <h3 className="text-lg font-semibold text-sky-100">Tổng cộng</h3>
-                  <span className="text-sky-200 font-medium">{importRecord.products.length} sản phẩm</span>
+                  <span className="text-sky-200 font-medium">{receipt.details?.length || 0} sản phẩm</span>
                 </div>
                 <p className="text-4xl font-bold tracking-tight">
-                  {importRecord.totalAmount.toLocaleString('vi-VN')} <span className="text-2xl font-semibold text-sky-200">VND</span>
+                  {receipt.total_amount.toLocaleString('vi-VN')} <span className="text-2xl font-semibold text-sky-200">VND</span>
                 </p>
-                {importRecord.note && (
-                  <div className="mt-4 p-3 bg-white/10 rounded-lg">
-                    <p className="text-sky-100 text-sm">{importRecord.note}</p>
-                  </div>
-                )}
+                <div className="mt-4 p-3 bg-white/10 rounded-lg">
+                  <p className="text-sky-100 text-sm">Nhà cung cấp: {receipt.agency_name}</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Xác nhận xóa</h3>
+            <p className="text-gray-600 mb-6">
+              Bạn có chắc chắn muốn xóa phiếu nhập #{receipt.receipt_id}? Hành động này không thể hoàn tác.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={deleting}
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleDeleteReceipt}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                disabled={deleting}
+              >
+                {deleting ? 'Đang xóa...' : 'Xóa'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };
 
-export default ViewImportPage; 
+export default ViewImportPage;
