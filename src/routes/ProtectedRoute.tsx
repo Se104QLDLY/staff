@@ -9,7 +9,7 @@ export const ProtectedRoute = () => {
     // Only redirect if we're done loading AND there's no user
     if (!isLoading && !user) {
       console.log('Staff app: No user found, redirecting to central login');
-      window.location.href = 'http://localhost:5173/login';
+      window.location.href = 'http://localhost:5179'; // Fixed: Login page port
       return;
     }
 
@@ -18,13 +18,13 @@ export const ProtectedRoute = () => {
       console.log('Staff app: Wrong role, redirecting to appropriate app');
       switch (user.account_role) {
         case 'admin':
-          window.location.href = 'http://localhost:5173/admin';
+          window.location.href = 'http://localhost:5178'; // Fixed: Admin port is 5178
           break;
         case 'agent':
           window.location.href = 'http://localhost:5174/';
           break;
         default:
-          window.location.href = 'http://localhost:5173/login';
+          window.location.href = 'http://localhost:5179'; // Fixed: Login page is 5179
       }
       return;
     }

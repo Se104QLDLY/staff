@@ -61,7 +61,19 @@ export const login = async (credentials: LoginCredentials): Promise<LoginRespons
  * @returns Promise chứa thông tin user
  */
 export const getMe = async (): Promise<User> => {
-  const { data } = await axiosClient.get<any>('/auth/me/');
+  const { data } = await axiosClient.get<any>('/auth/me/', {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    },
+    // Thêm timestamp để tránh cache
+    params: {
+      '_t': Date.now()
+    }
+  });
+  console.log('Staff app: Raw API response for getMe:', data);
+  
   const normalizedUser: User = {
     id: data.user_id,
     username: data.username,
@@ -72,6 +84,8 @@ export const getMe = async (): Promise<User> => {
     account_role: data.account_role,
     agency_id: data.agency_id,
   };
+  
+  console.log('Staff app: Normalized user data:', normalizedUser);
   return normalizedUser;
 };
 

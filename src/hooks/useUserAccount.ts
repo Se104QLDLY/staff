@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 type UserRole = 'admin' | 'client';
 
@@ -26,7 +25,6 @@ interface UseUserAccountReturn {
 
 export const useUserAccount = (): UseUserAccountReturn => {
   const [isOpen, setIsOpen] = useState(false);
-  const navigate = useNavigate();
   
   // Trong thực tế, sẽ lấy từ context/redux/api
   const user = mockUser;
@@ -39,7 +37,9 @@ export const useUserAccount = (): UseUserAccountReturn => {
     // Xử lý logic đăng xuất thực tế
     // Ví dụ: xóa token, xóa thông tin người dùng, v.v.
     setIsOpen(false);
-    navigate('/login');
+    // Redirect về admin site homepage sau khi logout (not login page)
+    const adminSiteUrl = import.meta.env.VITE_ADMIN_SITE_URL || 'http://localhost:5178';
+    window.location.href = adminSiteUrl;
   };
   
   return {

@@ -26,8 +26,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const checkUserSession = async () => {
       try {
         const currentUser = await getMe();
+        console.log('Staff app: Successfully authenticated user:', currentUser);
+        
+        // Kiểm tra xem có phải user mới không bằng cách compare với localStorage
+        const lastUserId = localStorage.getItem('lastUserId');
+        const lastUserRole = localStorage.getItem('lastUserRole');
+        
+        if (lastUserId && lastUserId !== currentUser.id.toString()) {
+          console.log('Staff app: Detected user ID change, forcing page reload');
+          localStorage.clear();
+          sessionStorage.clear();
+          window.location.reload();
+          return;
+        }
+        
+        if (lastUserRole && lastUserRole !== currentUser.account_role) {
+          console.log('Staff app: Detected user role change, forcing page reload');
+          localStorage.clear();
+          sessionStorage.clear();
+          window.location.reload();
+          return;
+        }
+        
+        // Lưu current user info để detect thay đổi lần sau
+        localStorage.setItem('lastUserId', currentUser.id.toString());
+        localStorage.setItem('lastUserRole', currentUser.account_role || 'unknown');
         setUser(currentUser);
       } catch (error) {
+        console.log('Staff app: Authentication check failed:', error);
+        localStorage.removeItem('lastUserId');
         setUser(null);
       } finally {
         setIsLoading(false);
@@ -41,14 +68,32 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await apiLogin(credentials);
     // Then fetch the full current user profile
     const currentUser = await getMe();
+    console.log('Staff app: User logged in successfully:', currentUser);
+    
+    // Clear old cache và set new user info
+    localStorage.clear();
+    sessionStorage.clear();
+    localStorage.setItem('lastUserId', currentUser.id.toString());
+    localStorage.setItem('lastUserRole', currentUser.account_role || 'unknown');
+    
     setUser(currentUser);
     setSession(prev => prev + 1);
   };
 
   const logout = async () => {
+    console.log('Staff app: User logging out');
     await apiLogout();
+    
+    // Clear tất cả cache khi logout
+    localStorage.clear();
+    sessionStorage.clear();
+    
     setUser(null);
     setSession(prev => prev + 1);
+    
+    // Redirect về admin site homepage sau khi logout (not login page)
+    const adminSiteUrl = import.meta.env.VITE_ADMIN_SITE_URL || 'http://localhost:5178';
+    window.location.href = adminSiteUrl;
   };
 
   const value = { user, isLoading, login, logout, session };

@@ -14,12 +14,19 @@ const AgencyPage: React.FC = () => {
   useEffect(() => {
     const loadAgencies = async () => {
       try {
-        if (!user) return;
+        if (!user) {
+          setAgencies([]);
+          return;
+        }
 
         // Fetch assigned agencies using a direct axios call to avoid baseURL conflict
         const assignedRes = await axios.get('/api/v1/staff-agency/by_staff/', {
           params: { staff_id: user.id },
           withCredentials: true,
+          headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+          }
         });
         
         console.log('Staff assigned agencies response:', assignedRes.data);
@@ -46,7 +53,12 @@ const AgencyPage: React.FC = () => {
         setAgencies([]);
       }
     };
-    loadAgencies();
+    
+    if (user) {
+      loadAgencies();
+    } else {
+      setAgencies([]);
+    }
   }, [user]);
 
   // Lọc danh sách theo từ khóa

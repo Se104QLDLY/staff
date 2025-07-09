@@ -14,11 +14,12 @@ axiosClient.interceptors.response.use(
   },
   (error: AxiosError) => {
     const status = error.response?.status;
-    const url = error.config?.url || '';
-    // Only reload for 401 errors on endpoints other than /auth/me/
-    if (status === 401 && !url.endsWith('/auth/me/')) {
-      console.error('Unauthorized! Reloading page...');
-      window.location.reload();
+    // Xử lý lỗi 401 (Unauthorized)
+    if (status === 401) {
+      // Redirect về trang login chính (homepage)
+      console.log('Staff app: 401 Unauthorized, redirecting to login');
+      window.location.href = 'http://localhost:5173';
+      return Promise.reject(error);
     }
     return Promise.reject(error);
   }
