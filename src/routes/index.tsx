@@ -20,6 +20,8 @@ import ReportsPage from './reports';
 import CreateReportPage from './reports/add';
 import ViewReportPage from './reports/view';
 import EditReportPage from './reports/edit';
+import RegulationsPage from './regulations';
+import ViewRegulationPage from './regulations/view';
 import { ProtectedRoute } from './ProtectedRoute';
 
 const AppRoutes = () => {
@@ -52,6 +54,9 @@ const AppRoutes = () => {
         <Route path="/reports/add" element={<CreateReportPage />} />
         <Route path="/reports/view/:id" element={<ViewReportPage />} />
         <Route path="/reports/edit/:id" element={<EditReportPage />} />
+        
+        <Route path="/regulations" element={<RegulationsPage />} />
+        <Route path="/regulations/view/:key" element={<ViewRegulationPage />} />
         
         <Route path="*" element={<NotFound />} />
       </Route>

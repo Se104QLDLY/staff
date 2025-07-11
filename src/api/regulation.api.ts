@@ -13,11 +13,11 @@ export interface Regulation {
 }
 
 export const getRegulations = async (): Promise<Regulation[]> => {
-  const res = await axiosClient.get('/regulations/');
+  const res = await axiosClient.get('/regulation/');
   return res.data;
 };
 
 export const getRegulationDetail = async (key: string): Promise<Regulation> => {
-  const res = await axiosClient.get(`/regulations/${key}/`);
+  const res = await axiosClient.get(`/regulation/${key}/`);
   return res.data;
 }; 
