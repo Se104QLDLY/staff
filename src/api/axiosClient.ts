@@ -18,7 +18,7 @@ axiosClient.interceptors.response.use(
     if (status === 401) {
       // Redirect về trang login chính (homepage)
       console.log('Staff app: 401 Unauthorized, redirecting to login');
-      window.location.href = import.meta.env.VITE_LOGIN_APP_URL || 'http://localhost:5178';
+      window.location.href = import.meta.env.VITE_LOGIN_APP_URL || 'http://localhost:5179';
       return Promise.reject(error);
     }
     return Promise.reject(error);
