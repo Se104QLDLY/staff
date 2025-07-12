@@ -1,68 +1,98 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, type SubmitHandler, type FieldValues } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
 import { useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '../../components/layout/DashboardLayout/DashboardLayout';
+import { getAgencies, generateReport, type AgencyOption } from '../../api/report.api';
+import axios from 'axios';
+
+// Create direct axios instance with correct backend URL  
+const backendApi = axios.create({
+  baseURL: 'http://localhost:8000/api/v1',
+  withCredentials: true,
+});
+import { toast } from 'react-hot-toast';
 
 interface ReportFormInputs {
-  type: 'sales' | 'debt' | 'stock';
+  type: 'sales' | 'debt' | 'inventory';
   period: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
   startDate: string;
   endDate: string;
+  agency_id?: number;
   notes?: string;
 }
 
-interface SalesRow { agency: string; numExport: string; totalValue: string; ratio: string; }
-interface DebtRow { agency: string; debtStart: string; incurred: string; debtEnd: string; }
-interface StockRow { agency: string; stockStart: string; import: string; export: string; stockEnd: string; }
-
 const schema: yup.ObjectSchema<ReportFormInputs> = yup.object().shape({
-  type: yup.mixed<'sales' | 'debt' | 'stock'>().oneOf(['sales', 'debt', 'stock']).required('Vui lòng chọn loại báo cáo'),
+  type: yup.mixed<'sales' | 'debt' | 'inventory'>().oneOf(['sales', 'debt', 'inventory']).required('Vui lòng chọn loại báo cáo'),
   period: yup.mixed<'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly'>().oneOf(['daily', 'weekly', 'monthly', 'quarterly', 'yearly']).required('Vui lòng chọn kỳ báo cáo'),
   startDate: yup.string().required('Vui lòng chọn ngày bắt đầu'),
   endDate: yup.string().required('Vui lòng chọn ngày kết thúc'),
+  agency_id: yup.number().optional(),
   notes: yup.string().max(500, 'Ghi chú không được vượt quá 500 ký tự')
 });
 
-type ReportType = 'sales' | 'debt' | 'stock' | '';
+type ReportType = 'sales' | 'debt' | 'inventory' | '';
 
 const AddReportPage: React.FC = () => {
   const navigate = useNavigate();
   const [isGenerating, setIsGenerating] = useState(false);
   const [reportType, setReportType] = useState<ReportType>('');
-  const [salesRows, setSalesRows] = useState<SalesRow[]>([{ agency: '', numExport: '', totalValue: '', ratio: '' }]);
-  const [debtRows, setDebtRows] = useState<DebtRow[]>([{ agency: '', debtStart: '', incurred: '', debtEnd: '' }]);
-  const [stockRows, setStockRows] = useState<StockRow[]>([{ agency: '', stockStart: '', import: '', export: '', stockEnd: '' }]);
+  const [agencies, setAgencies] = useState<AgencyOption[]>([]);
+  const [loadingAgencies, setLoadingAgencies] = useState(false);
 
   const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<ReportFormInputs>({
     resolver: yupResolver(schema),
     mode: 'onChange'
   });
 
+  // Load danh sách đại lý khi component mount
+  useEffect(() => {
+    const loadAgencies = async () => {
+      try {
+        setLoadingAgencies(true);
+        const response = await backendApi.get('/finance/reports/agencies/');
+        setAgencies(response.data);
+      } catch (error) {
+        console.error('Error loading agencies:', error);
+        toast.error('Không thể tải danh sách đại lý');
+      } finally {
+        setLoadingAgencies(false);
+      }
+    };
+
+    loadAgencies();
+  }, []);
+
   const onSubmit: SubmitHandler<ReportFormInputs> = async (data) => {
     setIsGenerating(true);
-    console.log(data);
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsGenerating(false);
-    navigate('/reports');
+    try {
+      const payload: any = {
+        report_type: data.type,
+        start_date: data.startDate,
+        end_date: data.endDate,
+      };
+      if (data.agency_id) {
+        payload.agency_id = data.agency_id;
+      }
+      console.log('Payload gửi lên backend:', payload);
+      const response = await backendApi.post('/finance/reports/generate/', payload);
+      
+      console.log('Report created:', response.data);
+      toast.success(`Báo cáo ${data.type === 'sales' ? 'doanh số' : data.type === 'debt' ? 'công nợ' : 'tồn kho'} đã được tạo thành công!`);
+      navigate('/reports');
+    } catch (error: any) {
+      console.error('Error generating report:', error);
+      const errorMsg = error.response?.data?.error || 'Có lỗi xảy ra khi tạo báo cáo';
+      toast.error(errorMsg);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  const addRow = (type: string) => {
-    if (type === 'sales') setSalesRows([...salesRows, { agency: '', numExport: '', totalValue: '', ratio: '' }]);
-    if (type === 'debt') setDebtRows([...debtRows, { agency: '', debtStart: '', incurred: '', debtEnd: '' }]);
-    if (type === 'stock') setStockRows([...stockRows, { agency: '', stockStart: '', import: '', export: '', stockEnd: '' }]);
-  };
-  const removeRow = (type: string, idx: number) => {
-    if (type === 'sales') setSalesRows(salesRows.filter((_, i) => i !== idx));
-    if (type === 'debt') setDebtRows(debtRows.filter((_, i) => i !== idx));
-    if (type === 'stock') setStockRows(stockRows.filter((_, i) => i !== idx));
-  };
-  const handleTableChange = (type: string, idx: number, field: string, value: string) => {
-    if (type === 'sales') setSalesRows(salesRows.map((row, i) => i === idx ? { ...row, [field]: value } : row));
-    if (type === 'debt') setDebtRows(debtRows.map((row, i) => i === idx ? { ...row, [field]: value } : row));
-    if (type === 'stock') setStockRows(stockRows.map((row, i) => i === idx ? { ...row, [field]: value } : row));
+  const handleTypeChange = (type: string) => {
+    setReportType(type as ReportType);
+    setValue('type', type as 'sales' | 'debt' | 'inventory');
   };
 
   return (
@@ -79,30 +109,54 @@ const AddReportPage: React.FC = () => {
             ← Quay lại
           </button>
         </div>
+
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Report Type */}
-          <div>
+            <div>
               <label className="block text-blue-700 font-semibold mb-2">Loại báo cáo *</label>
               <select
                 {...register('type')}
                 value={reportType}
-                onChange={e => { setReportType(e.target.value as ReportType); setValue('type', e.target.value as 'sales' | 'debt' | 'stock'); }}
+                onChange={e => handleTypeChange(e.target.value)}
                 className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-lg bg-blue-50"
               >
                 <option value="">Chọn loại báo cáo</option>
                 <option value="sales">Báo cáo doanh số</option>
                 <option value="debt">Báo cáo công nợ</option>
-                <option value="stock">Báo cáo tồn kho</option>
+                <option value="inventory">Báo cáo tồn kho</option>
               </select>
               {errors.type && (
                 <span className="text-red-500 text-sm mt-1">{errors.type.message}</span>
               )}
-          </div>
+            </div>
+
+            {/* Agency Selection - Only for sales and debt reports */}
+            {(reportType === 'sales' || reportType === 'debt') && (
+              <div>
+                <label className="block text-blue-700 font-semibold mb-2">Đại lý</label>
+                <select
+                  {...register('agency_id')}
+                  className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-lg bg-blue-50"
+                  disabled={loadingAgencies}
+                >
+                  <option value="">Tất cả đại lý</option>
+                  {agencies.map((agency) => (
+                    <option key={agency.agency_id} value={agency.agency_id}>
+                      {agency.agency_name}
+                    </option>
+                  ))}
+                </select>
+                {loadingAgencies && (
+                  <span className="text-blue-500 text-sm mt-1">Đang tải danh sách đại lý...</span>
+                )}
+              </div>
+            )}
+
             {/* Report Period */}
-          <div>
+            <div>
               <label className="block text-blue-700 font-semibold mb-2">Kỳ báo cáo *</label>
-            <select
+              <select
                 {...register('period')}
                 className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-lg bg-blue-50"
               >
@@ -112,11 +166,12 @@ const AddReportPage: React.FC = () => {
                 <option value="monthly">Theo tháng</option>
                 <option value="quarterly">Theo quý</option>
                 <option value="yearly">Theo năm</option>
-            </select>
+              </select>
               {errors.period && (
                 <span className="text-red-500 text-sm mt-1">{errors.period.message}</span>
               )}
             </div>
+
             {/* Start Date */}
             <div>
               <label className="block text-blue-700 font-semibold mb-2">Ngày bắt đầu *</label>
@@ -128,11 +183,12 @@ const AddReportPage: React.FC = () => {
               {errors.startDate && (
                 <span className="text-red-500 text-sm mt-1">{errors.startDate.message}</span>
               )}
-          </div>
+            </div>
+
             {/* End Date */}
-          <div>
+            <div>
               <label className="block text-blue-700 font-semibold mb-2">Ngày kết thúc *</label>
-            <input
+              <input
                 type="date"
                 {...register('endDate')}
                 className="w-full px-4 py-3 border-2 border-blue-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all text-lg bg-blue-50"
@@ -142,6 +198,7 @@ const AddReportPage: React.FC = () => {
               )}
             </div>
           </div>
+
           {/* Notes */}
           <div>
             <label className="block text-blue-700 font-semibold mb-2">Ghi chú</label>
@@ -155,124 +212,46 @@ const AddReportPage: React.FC = () => {
               <span className="text-red-500 text-sm mt-1">{errors.notes.message}</span>
             )}
           </div>
-          {/* Hiển thị bảng nhập liệu theo loại báo cáo */}
-          {reportType === 'sales' && (
-            <div className="mt-8">
-              <div className="font-bold text-lg mb-2">Báo Cáo Doanh Số</div>
-              <table className="min-w-full border border-blue-200 rounded-xl overflow-hidden">
-                <thead className="bg-blue-200 text-blue-900">
-                  <tr>
-                    <th className="px-3 py-2">STT</th>
-                    <th className="px-3 py-2">Đại Lý</th>
-                    <th className="px-3 py-2">Số Phiếu Xuất</th>
-                    <th className="px-3 py-2">Tổng Trị Giá</th>
-                    <th className="px-3 py-2">Tỷ Lệ</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {salesRows.map((row, idx) => (
-                    <tr key={idx} className="bg-blue-50">
-                      <td className="px-3 py-2 text-center">{idx + 1}</td>
-                      <td className="px-3 py-2"><input value={row.agency} onChange={e => handleTableChange('sales', idx, 'agency', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><input value={row.numExport} onChange={e => handleTableChange('sales', idx, 'numExport', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><input value={row.totalValue} onChange={e => handleTableChange('sales', idx, 'totalValue', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><input value={row.ratio} onChange={e => handleTableChange('sales', idx, 'ratio', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><button type="button" onClick={() => removeRow('sales', idx)} className="text-red-500 font-bold">X</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <button type="button" onClick={() => addRow('sales')} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">+ Thêm dòng</button>
-            </div>
-          )}
-          {reportType === 'debt' && (
-            <div className="mt-8">
-              <div className="font-bold text-lg mb-2">Báo Cáo Công Nợ Đại Lý</div>
-              <table className="min-w-full border border-blue-200 rounded-xl overflow-hidden">
-                <thead className="bg-blue-200 text-blue-900">
-                  <tr>
-                    <th className="px-3 py-2">STT</th>
-                    <th className="px-3 py-2">Đại Lý</th>
-                    <th className="px-3 py-2">Nợ Đầu</th>
-                    <th className="px-3 py-2">Phát Sinh</th>
-                    <th className="px-3 py-2">Nợ Cuối</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {debtRows.map((row, idx) => (
-                    <tr key={idx} className="bg-blue-50">
-                      <td className="px-3 py-2 text-center">{idx + 1}</td>
-                      <td className="px-3 py-2"><input value={row.agency} onChange={e => handleTableChange('debt', idx, 'agency', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><input value={row.debtStart} onChange={e => handleTableChange('debt', idx, 'debtStart', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><input value={row.incurred} onChange={e => handleTableChange('debt', idx, 'incurred', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><input value={row.debtEnd} onChange={e => handleTableChange('debt', idx, 'debtEnd', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><button type="button" onClick={() => removeRow('debt', idx)} className="text-red-500 font-bold">X</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <button type="button" onClick={() => addRow('debt')} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">+ Thêm dòng</button>
-            </div>
-          )}
-          {reportType === 'stock' && (
-            <div className="mt-8">
-              <div className="font-bold text-lg mb-2">Báo Cáo Tồn Kho Đại Lý</div>
-              <table className="min-w-full border border-blue-200 rounded-xl overflow-hidden">
-                <thead className="bg-blue-200 text-blue-900">
-                  <tr>
-                    <th className="px-3 py-2">STT</th>
-                    <th className="px-3 py-2">Đại Lý</th>
-                    <th className="px-3 py-2">Tồn Đầu</th>
-                    <th className="px-3 py-2">Nhập</th>
-                    <th className="px-3 py-2">Xuất</th>
-                    <th className="px-3 py-2">Tồn Cuối</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {stockRows.map((row, idx) => (
-                    <tr key={idx} className="bg-blue-50">
-                      <td className="px-3 py-2 text-center">{idx + 1}</td>
-                      <td className="px-3 py-2"><input value={row.agency} onChange={e => handleTableChange('stock', idx, 'agency', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><input value={row.stockStart} onChange={e => handleTableChange('stock', idx, 'stockStart', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><input value={row.import} onChange={e => handleTableChange('stock', idx, 'import', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><input value={row.export} onChange={e => handleTableChange('stock', idx, 'export', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><input value={row.stockEnd} onChange={e => handleTableChange('stock', idx, 'stockEnd', e.target.value)} className="w-full rounded border px-2" /></td>
-                      <td className="px-3 py-2"><button type="button" onClick={() => removeRow('stock', idx)} className="text-red-500 font-bold">X</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <button type="button" onClick={() => addRow('stock')} className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700">+ Thêm dòng</button>
-            </div>
-          )}
-          {/* Submit Button */}
-          <div className="flex gap-4 pt-6">
-            <button
-              type="submit"
-              disabled={isGenerating}
-              className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-cyan-500 text-white font-bold rounded-xl shadow-lg hover:scale-105 hover:shadow-xl transition-all text-lg disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isGenerating ? (
-                <div className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Đang tạo báo cáo...
-                </div>
-              ) : (
-                'Tạo báo cáo'
+
+          {/* Report Description */}
+          {reportType && (
+            <div className="bg-blue-50 p-4 rounded-xl border-2 border-blue-200">
+              <h3 className="font-semibold text-blue-800 mb-2">Mô tả báo cáo</h3>
+              {reportType === 'sales' && (
+                <p className="text-blue-700">
+                  Báo cáo doanh số bao gồm: số phiếu xuất, tổng doanh thu, tỷ lệ đóng góp của mỗi đại lý.
+                </p>
               )}
-            </button>
+              {reportType === 'debt' && (
+                <p className="text-blue-700">
+                  Báo cáo công nợ bao gồm: nợ đầu kỳ, phát sinh trong kỳ, thanh toán trong kỳ, nợ cuối kỳ.
+                  <br />
+                  <strong>Công thức:</strong> Nợ cuối kỳ = Nợ đầu kỳ + Phát sinh - Thanh toán
+                </p>
+              )}
+              {reportType === 'inventory' && (
+                <p className="text-blue-700">
+                  Báo cáo tồn kho chỉ hiển thị các mặt hàng có số lượng tồn kho lớn hơn 0.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Submit Button */}
+          <div className="flex justify-end space-x-4">
             <button
               type="button"
               onClick={() => navigate('/reports')}
-              className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-semibold"
+              className="px-6 py-3 text-blue-600 bg-blue-100 rounded-xl hover:bg-blue-200 transition-colors font-semibold"
             >
-              Hủy
+              Hủy bỏ
+            </button>
+            <button
+              type="submit"
+              disabled={isGenerating}
+              className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isGenerating ? 'Đang tạo báo cáo...' : 'Tạo báo cáo'}
             </button>
           </div>
         </form>

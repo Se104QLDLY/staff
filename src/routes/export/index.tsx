@@ -18,7 +18,7 @@ interface ExportItem {
   creator: string;
   createdDate: string;
   updatedDate: string;
-  status?: 'pending' | 'confirmed'; // Thêm trạng thái xác nhận
+  status?: 'pending' | 'confirmed' | 'delivered'; // Thêm trạng thái xác nhận
 }
 
 interface ExportRequest {
@@ -77,7 +77,7 @@ const ExportPage: React.FC = () => {
       setAssignedAgencies(agencyList);
       
       try {
-        // Lọc các issue từ các agency đã phân công: chỉ processing và confirmed
+        // Lọc các issue từ các agency đã phân công: processing, confirmed, delivered
         let allResults: Issue[] = [];
         if (agencyIds.length > 0) {
           const responses = await Promise.all(
@@ -86,7 +86,7 @@ const ExportPage: React.FC = () => {
           allResults = responses.flatMap(r => r.results);
         }
         const pendingIssues = allResults.filter(issue => issue.status === 'processing');
-        const confirmedIssues = allResults.filter(issue => issue.status === 'confirmed');
+        const confirmedIssues = allResults.filter(issue => issue.status === 'confirmed' || issue.status === 'delivered');
         
         // Map sang frontend shape với tính lại total từ details - tất cả từ bảng issue
         const mappedPending = pendingIssues.map(issue => {
@@ -123,7 +123,7 @@ const ExportPage: React.FC = () => {
             creator: issue.user_name || 'Unknown User',
             createdDate: issue.created_at,
             updatedDate: issue.created_at,
-            status: 'confirmed' as const,
+            status: issue.status === 'delivered' ? 'delivered' as const : 'confirmed' as const,
           };
         });
         
@@ -241,8 +241,8 @@ const ExportPage: React.FC = () => {
     const req = exportRequests.find(r => r.id === id);
     if (!req) return;
     try {
-      // Chỉ cập nhật issue status thành 'processing' - chờ agency xác nhận
-      await updateIssueStatus(id, 'processing', 'Đã xác nhận xuất hàng - chờ đại lý nhận hàng');
+      // Cập nhật issue status thành 'confirmed' - chờ agency xác nhận nhận hàng
+      await updateIssueStatus(id, 'confirmed', 'Đã xác nhận xuất hàng - chờ đại lý nhận hàng');
       
       // Cập nhật UI: chuyển từ requests sang exportItems
       const issueDetail = await getIssueById(req.id);
@@ -265,7 +265,7 @@ const ExportPage: React.FC = () => {
         creator: issueDetail.user_name || 'Unknown User',
         createdDate: issueDetail.created_at,
         updatedDate: issueDetail.created_at,
-        status: 'pending' as const, // Đang chờ agency xác nhận
+        status: 'confirmed' as const, // Đã xác nhận bởi staff - chờ agency nhận hàng
       };
       
       // Cập nhật state
@@ -513,8 +513,10 @@ const ExportPage: React.FC = () => {
                     <td className="px-6 py-4 text-gray-700 whitespace-nowrap">{new Date(item.exportDate).toLocaleDateString('vi-VN')}</td>
                     <td className="px-6 py-4 text-green-700 font-bold whitespace-nowrap">{item.totalAmount.toLocaleString('vi-VN')} VND</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {item.status === 'confirmed' ? (
-                        <span className="text-green-600 font-semibold">Đã xác nhận</span>
+                      {item.status === 'delivered' ? (
+                        <span className="text-green-600 font-semibold">Đã giao hàng</span>
+                      ) : item.status === 'confirmed' ? (
+                        <span className="text-blue-600 font-semibold">Đã xác nhận</span>
                       ) : (
                         <span className="text-yellow-600 font-semibold">Đang xử lý</span>
                       )}

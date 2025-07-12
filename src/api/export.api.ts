@@ -8,7 +8,7 @@ export interface Issue {
   user_id: number;
   user_name?: string;
   total_amount: number;
-  status: 'processing' | 'confirmed' | 'postponed' | 'cancelled';
+  status: 'processing' | 'confirmed' | 'delivered' | 'postponed' | 'cancelled';
   status_reason?: string;
   created_at: string;
   debt_impact?: {

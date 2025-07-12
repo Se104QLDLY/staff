@@ -21,7 +21,7 @@ export const ProtectedRoute = () => {
           window.location.href = 'http://localhost:5178'; // Fixed: Admin port is 5178
           break;
         case 'agent':
-          window.location.href = 'http://localhost:5174/';
+          window.location.href = 'http://localhost:5175/';
           break;
         default:
           window.location.href = 'http://localhost:5179'; // Fixed: Login page is 5179

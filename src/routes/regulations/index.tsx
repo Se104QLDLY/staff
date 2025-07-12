@@ -14,15 +14,15 @@ const RegulationsPage: React.FC = () => {
     setError(null);
     getRegulations()
       .then(data => {
-        setRegulations(data);
+      setRegulations(data);
       })
       .catch(err => {
         console.error('Error fetching regulations:', err);
         setError('Không thể tải danh sách quy định');
       })
       .finally(() => {
-        setLoading(false);
-      });
+      setLoading(false);
+    });
   }, []);
 
   const filtered = regulations.filter(r =>
@@ -56,13 +56,13 @@ const RegulationsPage: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <input
+        <input
               type="text"
               className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              placeholder="Tìm kiếm quy định..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+          placeholder="Tìm kiếm quy định..."
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
           </div>
           {search && (
             <p className="text-sm text-gray-500 mt-2">
@@ -73,7 +73,7 @@ const RegulationsPage: React.FC = () => {
 
         {/* Content */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
-          {loading ? (
+              {loading ? (
             <div className="flex items-center justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               <span className="ml-3 text-gray-600">Đang tải danh sách quy định...</span>
@@ -88,7 +88,7 @@ const RegulationsPage: React.FC = () => {
                 Thử lại
               </button>
             </div>
-          ) : filtered.length === 0 ? (
+              ) : filtered.length === 0 ? (
             <div className="text-center py-12">
               {search ? (
                 <>
@@ -167,8 +167,8 @@ const RegulationsPage: React.FC = () => {
                       </td>
                     </tr>
                   ))}
-                </tbody>
-              </table>
+            </tbody>
+          </table>
             </div>
           )}
         </div>

@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { BarChart, FileText, FileSpreadsheet, FilePlus2, Users, TrendingUp, TrendingDown, CheckCircle, AlertCircle, Clock, User, Eye, Loader2 } from 'lucide-react';
+import { BarChart, FileText, FileSpreadsheet, FilePlus2, Users, TrendingUp, TrendingDown, CheckCircle, AlertCircle, Clock, User, Eye, Loader2, Download } from 'lucide-react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout/DashboardLayout';
 import { useAuth } from '../../hooks/useAuth';
 import { fetchAssignedAgencies, type AgencyInfo } from '../../api/staffAgency.api';
-import { getSalesReport, getDebtReport, type SalesReportItem, type DebtReportData } from '../../api/report.api';
+import { getSalesReport, getDebtReport, exportReportExcel, exportReportPDF, type SalesReportItem, type DebtReportData } from '../../api/report.api';
+import axios from 'axios';
+
+// Create direct axios instance with correct backend URL
+const backendApi = axios.create({
+  baseURL: 'http://localhost:8000/api/v1',
+  withCredentials: true,
+});
+import toast from 'react-hot-toast';
 
 interface Report {
   id: string;
@@ -17,103 +25,191 @@ interface Report {
   updatedDate: string;
   description?: string;
   amount?: number;
+  reportId?: number; // Add this for export functionality
+}
+
+interface AgencyStats {
+  id: string;
+  name: string;
+  revenue: number;
+  debt: number;
 }
 
 const useStaffReports = () => {
   const { user } = useAuth();
+  const [reports, setReports] = useState<Report[]>([]);
+  const [assignedAgencies, setAssignedAgencies] = useState<AgencyInfo[]>([]);
+  const [totalRevenue, setTotalRevenue] = useState(0);
+  const [totalDebt, setTotalDebt] = useState(0);
+  const [topRevenue, setTopRevenue] = useState<AgencyStats[]>([]);
+  const [topDebt, setTopDebt] = useState<AgencyStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reports, setReports] = useState<Report[]>([]);
-  const [topRevenue, setTopRevenue] = useState<{ id: string; name: string; revenue: number }[]>([]);
-  const [topDebt, setTopDebt] = useState<{ id: string; name: string; debt: number }[]>([]);
 
   useEffect(() => {
-    const fetchReports = async () => {
+    const fetchData = async () => {
+      if (!user) return;
+
       try {
-        if (!user) return;
-        // Lấy danh sách đại lý nhân viên quản lý
-        const agencies: AgencyInfo[] = await fetchAssignedAgencies(user.id);
-        if (!agencies.length) {
-          setError('Bạn chưa được phân công quản lý đại lý nào.');
-          setLoading(false);
+        setLoading(true);
+        setError(null);
+
+        // Lấy danh sách đại lý mà staff quản lý
+        const agencies = await fetchAssignedAgencies(user.id);
+        setAssignedAgencies(agencies);
+
+        if (agencies.length === 0) {
+          setReports([]);
+          setTotalRevenue(0);
+          setTotalDebt(0);
+          setTopRevenue([]);
+          setTopDebt([]);
           return;
         }
 
-        const today = new Date();
-        const sixMonthsAgo = new Date();
-        sixMonthsAgo.setMonth(today.getMonth() - 6);
+        // Tính tổng công nợ từ debt_amount của các đại lý
+        const totalDebtAmount = agencies.reduce((sum, agency) => sum + agency.debt_amount, 0);
+        setTotalDebt(totalDebtAmount);
 
-        // Fetch song song doanh số và công nợ cho từng đại lý
-        const salesPromises = agencies.map(a => getSalesReport({ agency_id: a.agency_id, from: sixMonthsAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] }));
-        const debtPromises = agencies.map(a => getDebtReport({ agency_id: a.agency_id }));
+        // Lấy doanh thu thực từ issues của các đại lý
+        let totalRevenueAmount = 0;
+        const agencyRevenueData: { [key: number]: number } = {};
 
-        const [salesResults, debtResults] = await Promise.all([
-          Promise.all(salesPromises),
-          Promise.all(debtPromises)
-        ]);
+        for (const agency of agencies) {
+          try {
+            // Lấy tất cả issues của agency này
+            const issuesResponse = await backendApi.get(`/inventory/issues/`, {
+              params: { agency_id: agency.agency_id }
+            });
+            
+            const issues = issuesResponse.data.results || issuesResponse.data;
+            const agencyRevenue = issues.reduce((sum: number, issue: any) => {
+              // Chỉ tính các issue đã hoàn thành (delivered)
+              if (issue.status === 'delivered') {
+                return sum + parseFloat(issue.total_amount || 0);
+              }
+              return sum;
+            }, 0);
 
-        // Tính tổng doanh thu 6 tháng / công nợ hiện tại cho từng đại lý
-        const generatedReports: Report[] = [];
-        const topRev: { id: string; name: string; revenue: number }[] = [];
-        const topDeb: { id: string; name: string; debt: number }[] = [];
+            agencyRevenueData[agency.agency_id] = agencyRevenue;
+            totalRevenueAmount += agencyRevenue;
+          } catch (err) {
+            console.error(`Error fetching issues for agency ${agency.agency_id}:`, err);
+            agencyRevenueData[agency.agency_id] = 0;
+          }
+        }
 
-        agencies.forEach((agency, idx) => {
-          const salesData: SalesReportItem[] = salesResults[idx];
-          const debtData: DebtReportData = debtResults[idx];
+        setTotalRevenue(totalRevenueAmount);
 
-          const totalRevenue = salesData.reduce((sum, s) => sum + Number(s.total_revenue), 0);
-          const totalDebt = Number(debtData.total_debt ?? 0);
+        // Tạo danh sách top doanh thu
+        const topRevenueList = agencies
+          .map(agency => ({
+            id: `DL${agency.agency_id}`,
+            name: agency.agency_name,
+            revenue: agencyRevenueData[agency.agency_id] || 0,
+            debt: agency.debt_amount
+          }))
+          .sort((a, b) => b.revenue - a.revenue)
+          .slice(0, 5);
 
-          generatedReports.push({
-            id: `REV-${agency.agency_id}`,
-            title: `Báo cáo doanh thu 6 tháng - ${agency.agency_name}`,
-            type: 'Doanh thu',
-            period: '6 tháng',
+        setTopRevenue(topRevenueList);
+
+        // Tạo danh sách top công nợ
+        const topDebtList = agencies
+          .map(agency => ({
+            id: `DL${agency.agency_id}`,
+            name: agency.agency_name,
+            revenue: agencyRevenueData[agency.agency_id] || 0,
+            debt: agency.debt_amount
+          }))
+          .sort((a, b) => b.debt - a.debt)
+          .slice(0, 5);
+
+        setTopDebt(topDebtList);
+
+        // Lấy báo cáo đã tạo từ backend (để hiển thị danh sách)
+        try {
+          const response = await backendApi.get('/finance/reports/');
+          const realReports = response.data.results || response.data;
+          
+          // Transform backend reports to frontend format
+          const transformedReports: Report[] = realReports.map((report: any) => ({
+            id: `BC${report.report_id}`,
+            title: getReportTitle(report.report_type),
+            type: getReportTypeDisplay(report.report_type),
+            period: new Date(report.report_date).toLocaleDateString('vi-VN'),
             status: 'Hoàn thành',
-            creator: user.full_name || 'Hệ thống',
-            createdDate: today.toLocaleDateString('vi-VN'),
-            updatedDate: today.toLocaleDateString('vi-VN'),
-            amount: totalRevenue
-          });
+            creator: report.created_by_name || report.created_by_username || `User ${report.created_by}`,
+            createdDate: new Date(report.created_at).toLocaleDateString('vi-VN'),
+            updatedDate: new Date(report.created_at).toLocaleDateString('vi-VN'),
+            amount: calculateReportAmount(report),
+            reportId: report.report_id
+          }));
 
-          generatedReports.push({
-            id: `DEBT-${agency.agency_id}`,
-            title: `Báo cáo công nợ - ${agency.agency_name}`,
-            type: 'Công nợ',
-            period: today.toLocaleDateString('vi-VN'),
-            status: 'Hoàn thành',
-            creator: user.full_name || 'Hệ thống',
-            createdDate: today.toLocaleDateString('vi-VN'),
-            updatedDate: today.toLocaleDateString('vi-VN'),
-            amount: totalDebt
-          });
+          setReports(transformedReports);
+        } catch (err) {
+          console.error('Error fetching reports:', err);
+          setReports([]);
+        }
 
-          topRev.push({ id: `DL${agency.agency_id}`, name: agency.agency_name, revenue: totalRevenue });
-          topDeb.push({ id: `DL${agency.agency_id}`, name: agency.agency_name, debt: totalDebt });
-        });
-
-        // Sắp xếp top lists
-        topRev.sort((a, b) => b.revenue - a.revenue);
-        topDeb.sort((a, b) => b.debt - a.debt);
-
-        setReports(generatedReports);
-        setTopRevenue(topRev.slice(0, 5));
-        setTopDebt(topDeb.slice(0, 5));
-      } catch (err) {
-        console.error('Fetch staff reports error', err);
-        setError('Không thể tải dữ liệu báo cáo.');
+      } catch (err: any) {
+        console.error('Error fetching data:', err);
+        setError(err.message || 'Có lỗi xảy ra khi tải dữ liệu');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchReports();
+    fetchData();
   }, [user]);
 
-  return { reports, topRevenue, topDebt, loading, error };
+  return {
+    reports,
+    assignedAgencies,
+    totalRevenue,
+    totalDebt,
+    topRevenue,
+    topDebt,
+    loading,
+    error
+  };
 };
 
-const formatCurrency = (amount: number) => new Intl.NumberFormat('vi-VN').format(amount) + ' VND';
+const getReportTitle = (type: string) => {
+  switch (type) {
+    case 'sales': return 'Báo cáo doanh số';
+    case 'debt': return 'Báo cáo công nợ';
+    case 'inventory': return 'Báo cáo tồn kho';
+    default: return 'Báo cáo';
+  }
+};
+
+const getReportTypeDisplay = (type: string) => {
+  switch (type) {
+    case 'sales': return 'Doanh thu';
+    case 'debt': return 'Công nợ';
+    case 'inventory': return 'Tồn kho';
+    default: return 'Hoạt động';
+  }
+};
+
+const calculateReportAmount = (report: any) => {
+  if (!report.data) return 0;
+  
+  if (report.report_type === 'sales' && report.data.sales) {
+    return report.data.sales.reduce((sum: number, item: any) => sum + (item.total_sales || 0), 0);
+  }
+  
+  if (report.report_type === 'debt' && report.data.summary) {
+    return report.data.summary.reduce((sum: number, item: any) => sum + (item.debt_ending || 0), 0);
+  }
+  
+  if (report.report_type === 'inventory' && report.data.total_value) {
+    return report.data.total_value;
+  }
+  
+  return 0;
+};
 
 const getTypeBadge = (type: string) => {
   switch (type) {
@@ -144,83 +240,157 @@ const getStatusBadge = (status: string) => {
 };
 
 const StaffReportsPage: React.FC = () => {
-  const { reports, topRevenue, topDebt, loading, error } = useStaffReports();
+  const { reports, assignedAgencies, totalRevenue, totalDebt, topRevenue, topDebt, loading, error } = useStaffReports();
+  const [exportLoading, setExportLoading] = useState<{ [key: string]: boolean }>({});
+
+  const handleExportExcel = async (reportId: number, reportType: string) => {
+    const loadingKey = `excel-${reportId}`;
+    try {
+      setExportLoading(prev => ({ ...prev, [loadingKey]: true }));
+      const response = await backendApi.get(`/finance/reports/${reportId}/export_excel/`, {
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bao-cao-${reportType}-${reportId}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast.success('Xuất Excel thành công!');
+    } catch (err) {
+      console.error('Export Excel error:', err);
+      toast.error('Không thể xuất Excel. Vui lòng thử lại.');
+    } finally {
+      setExportLoading(prev => ({ ...prev, [loadingKey]: false }));
+    }
+  };
+
+  const handleExportPDF = async (reportId: number, reportType: string) => {
+    const loadingKey = `pdf-${reportId}`;
+    try {
+      setExportLoading(prev => ({ ...prev, [loadingKey]: true }));
+      const response = await backendApi.get(`/finance/reports/${reportId}/export_pdf/`, {
+        responseType: 'blob'
+      });
+      const blob = new Blob([response.data], { 
+        type: 'application/pdf' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bao-cao-${reportType}-${reportId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+      toast.success('Xuất PDF thành công!');
+    } catch (err) {
+      console.error('Export PDF error:', err);
+      toast.error('Không thể xuất PDF. Vui lòng thử lại.');
+    } finally {
+      setExportLoading(prev => ({ ...prev, [loadingKey]: false }));
+    }
+  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
-        <Loader2 className="h-16 w-16 text-blue-600 animate-spin" />
-        <p className="ml-4 text-xl text-gray-700">Đang tải dữ liệu báo cáo...</p>
-      </div>
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
+            <p className="text-gray-600">Đang tải dữ liệu báo cáo...</p>
+          </div>
+        </div>
+      </DashboardLayout>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-center">
-        <div>
-          <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-red-600">Đã xảy ra lỗi</h1>
-          <p className="text-gray-600 mt-2">{error}</p>
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-red-600 text-lg font-medium">{error}</p>
+          </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(amount);
+  };
+
   return (
     <DashboardLayout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-6">
-        <div className="bg-white rounded-3xl shadow-2xl p-8 border-2 border-blue-100 mb-8 flex flex-col gap-2 items-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl mb-2 shadow-lg">
-            <FileText className="h-8 w-8 text-white" />
-          </div>
-          <h1 className="text-3xl font-extrabold text-gray-900 mb-1 drop-shadow uppercase tracking-wide">LẬP BÁO CÁO</h1>
-          <p className="text-gray-600 text-lg text-center max-w-2xl">Tổng hợp, thống kê và quản lý các báo cáo doanh thu, tồn kho, công nợ và hoạt động của đại lý.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-2xl shadow-lg p-6 border-2 border-green-100 flex flex-col items-center">
-            <TrendingUp className="h-8 w-8 text-blue-600 mb-2"/>
-            <h3 className="text-gray-700 font-semibold mb-1">Tổng doanh thu</h3>
-            <p className="text-2xl font-extrabold text-blue-700">{formatCurrency(reports.filter(r => r.type === 'Doanh thu').reduce((sum, r) => sum + (r.amount || 0), 0))}</p>
-          </div>
-          <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-2xl shadow-lg p-6 border-2 border-red-100 flex flex-col items-center">
-            <TrendingDown className="h-8 w-8 text-red-600 mb-2"/>
-            <h3 className="text-gray-700 font-semibold mb-1">Tổng công nợ</h3>
-            <p className="text-2xl font-extrabold text-red-600">{formatCurrency(reports.filter(r => r.type === 'Công nợ').reduce((sum, r) => sum + (r.amount || 0), 0))}</p>
-          </div>
-          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl shadow-lg p-6 border-2 border-blue-100 flex flex-col items-center">
-            <FileText className="h-8 w-8 text-blue-600 mb-2"/>
-            <h3 className="text-gray-700 font-semibold mb-1">Số lượng báo cáo</h3>
-            <p className="text-2xl font-extrabold text-blue-800">{reports.length}</p>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Lập báo cáo</h1>
+            <p className="text-gray-600 mt-2">Tổng hợp, thống kê và quản lý các báo cáo doanh thu, tồn kho, công nợ và hoạt động của đại lý.</p>
           </div>
         </div>
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-          <h2 className="text-2xl font-bold text-blue-800 drop-shadow flex items-center gap-2"><FileSpreadsheet className="h-6 w-6 text-blue-600"/>Danh sách báo cáo</h2>
-          <div className="flex items-center gap-3">
-            <button 
-              onClick={() => alert('Chức năng đang phát triển')} 
-              className="flex items-center px-4 py-2 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors font-bold text-base shadow-md"
-            >
-              <FileSpreadsheet className="h-5 w-5 mr-2" />
-              Xuất Excel
-            </button>
-            <button 
-              onClick={() => alert('Chức năng đang phát triển')} 
-              className="flex items-center px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-colors font-bold text-base shadow-md"
-            >
-              <FileText className="h-5 w-5 mr-2" />
-              Xuất PDF
-            </button>
-            <Link 
-              to="/reports/add" 
-              className="flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-bold text-lg shadow-lg whitespace-nowrap"
-            >
-              <FilePlus2 className="h-6 w-6 mr-2" />
-              Lập báo cáo
-            </Link>
+
+        {/* Thống kê tổng quan */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-gradient-to-r from-green-400 to-blue-500 rounded-2xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold opacity-90">Tổng doanh thu</h3>
+                <p className="text-3xl font-bold mt-2">{formatCurrency(totalRevenue)}</p>
+              </div>
+              <TrendingUp className="h-12 w-12 opacity-80" />
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-red-400 to-pink-500 rounded-2xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold opacity-90">Tổng công nợ</h3>
+                <p className="text-3xl font-bold mt-2">{formatCurrency(totalDebt)}</p>
+              </div>
+              <TrendingDown className="h-12 w-12 opacity-80" />
+            </div>
+          </div>
+          
+          <div className="bg-gradient-to-r from-purple-400 to-indigo-500 rounded-2xl p-6 text-white shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold opacity-90">Số lượng đại lý</h3>
+                <p className="text-3xl font-bold mt-2">{assignedAgencies.length}</p>
+              </div>
+              <Users className="h-12 w-12 opacity-80" />
+            </div>
           </div>
         </div>
+
+        {/* Danh sách báo cáo */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden border-2 border-blue-100">
+          <div className="bg-blue-50 px-6 py-4 border-b border-blue-200">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-blue-800 flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Danh sách báo cáo ({reports.length})
+              </h2>
+              <Link
+                to="/reports/add"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md hover:shadow-lg"
+              >
+                <FilePlus2 className="h-6 w-6 mr-2" />
+                Lập báo cáo
+              </Link>
+            </div>
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-blue-50">
@@ -229,9 +399,7 @@ const StaffReportsPage: React.FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Tiêu đề</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Loại</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Kỳ báo cáo</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Dữ liệu chính</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Trạng thái</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Người tạo</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Ngày tạo</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-blue-700 uppercase tracking-wider">Thao tác</th>
                 </tr>
@@ -243,17 +411,46 @@ const StaffReportsPage: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.title}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{getTypeBadge(report.type)}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.period}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {report.type === 'Doanh thu' && <span>Doanh số: {formatCurrency(report.amount || 0)}</span>}
-                      {report.type === 'Công nợ' && <span>Số tiền công nợ: {formatCurrency(report.amount || 0)}</span>}
-                      {report.type === 'Tồn kho' && <span>Số lượng tồn: {report.amount || 0}</span>}
-                      {report.type === 'Hoạt động' && <span>Mô tả: {report.description || '-'}</span>}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">{getStatusBadge(report.status)}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 flex items-center gap-2"><User className="h-4 w-4 text-blue-400"/>{report.creator}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{report.createdDate}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Link to={`/reports/view/${report.id}`} className="text-blue-600 hover:text-blue-900 flex items-center gap-1"><Eye className="h-4 w-4"/>Xem chi tiết</Link>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div className="flex items-center gap-2">
+                        <Link 
+                          to={`/reports/view/${report.id}`}
+                          className="text-blue-600 hover:text-blue-800 transition-colors"
+                          title="Xem báo cáo"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Link>
+                        
+                        {report.reportId && (
+                          <>
+                            <button
+                              onClick={() => handleExportExcel(report.reportId!, report.type.toLowerCase())}
+                              disabled={exportLoading[`excel-${report.reportId}`]}
+                              className="text-green-600 hover:text-green-800 transition-colors disabled:opacity-50"
+                              title="Xuất Excel"
+                            >
+                              {exportLoading[`excel-${report.reportId}`] ? 
+                                <Loader2 className="h-4 w-4 animate-spin" /> : 
+                                <FileSpreadsheet className="h-4 w-4" />
+                              }
+                            </button>
+                            
+                            <button
+                              onClick={() => handleExportPDF(report.reportId!, report.type.toLowerCase())}
+                              disabled={exportLoading[`pdf-${report.reportId}`]}
+                              className="text-red-600 hover:text-red-800 transition-colors disabled:opacity-50"
+                              title="Xuất PDF"
+                            >
+                              {exportLoading[`pdf-${report.reportId}`] ? 
+                                <Loader2 className="h-4 w-4 animate-spin" /> : 
+                                <Download className="h-4 w-4" />
+                              }
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -261,62 +458,70 @@ const StaffReportsPage: React.FC = () => {
             </table>
           </div>
         </div>
-        {/* Thêm 2 card thống kê dưới danh sách báo cáo */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
-          {/* Hàng 1: Doanh số */}
+
+        {/* Thống kê đại lý */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Doanh số cao nhất */}
           <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-blue-100">
-            <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2"><TrendingUp className="h-5 w-5 text-blue-600"/>Danh sách đại lý có doanh số cao nhất</h3>
+            <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-blue-600"/>
+              Danh sách đại lý có doanh số cao nhất
+            </h3>
             <div className="overflow-x-auto">
               <table className="min-w-full bg-white border-collapse">
                 <thead>
-                  <tr className="bg-blue-50">
-                    <th className="py-2 px-4 text-left text-blue-700 font-semibold">MÃ ĐẠI LÝ</th>
-                    <th className="py-2 px-4 text-left text-blue-700 font-semibold">TÊN ĐẠI LÝ</th>
-                    <th className="py-2 px-4 text-right text-blue-700 font-semibold">DOANH SỐ</th>
+                  <tr className="border-b-2 border-blue-100">
+                    <th className="text-left py-2 px-4 font-semibold text-blue-700">MÃ ĐẠI LÝ</th>
+                    <th className="text-left py-2 px-4 font-semibold text-blue-700">TÊN ĐẠI LÝ</th>
+                    <th className="text-right py-2 px-4 font-semibold text-blue-700">DOANH SỐ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {topRevenue.map((agency) => (
-                    <tr key={agency.id} className="border-b last:border-0">
-                      <td className="py-2 px-4 font-bold text-blue-900 whitespace-nowrap">{agency.id}</td>
-                      <td className="py-2 px-4 text-gray-800 whitespace-nowrap">{agency.name}</td>
-                      <td className="py-2 px-4 text-right font-semibold text-blue-700 whitespace-nowrap">{agency.revenue.toLocaleString('vi-VN')} đ</td>
+                  {topRevenue.map((item, index) => (
+                    <tr key={item.id} className={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-blue-50' : 'bg-white'}`}>
+                      <td className="py-2 px-4 text-sm font-medium text-blue-900">{item.id}</td>
+                      <td className="py-2 px-4 text-sm text-gray-900">{item.name}</td>
+                      <td className="py-2 px-4 text-sm text-right font-semibold text-green-600">{formatCurrency(item.revenue)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
-          {/* Biểu đồ doanh số theo thời gian – đã lược bỏ */}
-          {/* Hàng 2: Công nợ */}
+
+          {/* Công nợ cao nhất */}
           <div className="bg-white rounded-2xl shadow-lg p-6 border-2 border-blue-100">
-            <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2"><TrendingDown className="h-5 w-5 text-red-600"/>Danh sách đại lý có công nợ cao nhất</h3>
+            <h3 className="text-xl font-bold text-blue-800 mb-4 flex items-center gap-2">
+              <TrendingDown className="h-5 w-5 text-red-600"/>
+              Danh sách đại lý có công nợ cao nhất
+            </h3>
             <div className="overflow-x-auto">
               <table className="min-w-full bg-white border-collapse">
                 <thead>
-                  <tr className="bg-blue-50">
-                    <th className="py-2 px-4 text-left text-blue-700 font-semibold">MÃ ĐẠI LÝ</th>
-                    <th className="py-2 px-4 text-left text-blue-700 font-semibold">TÊN ĐẠI LÝ</th>
-                    <th className="py-2 px-4 text-right text-blue-700 font-semibold">SỐ TIỀN CÔNG NỢ</th>
+                  <tr className="border-b-2 border-blue-100">
+                    <th className="text-left py-2 px-4 font-semibold text-blue-700">MÃ ĐẠI LÝ</th>
+                    <th className="text-left py-2 px-4 font-semibold text-blue-700">TÊN ĐẠI LÝ</th>
+                    <th className="text-right py-2 px-4 font-semibold text-blue-700">CÔNG NỢ</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {topDebt.map((agency) => (
-                    <tr key={agency.id} className="border-b last:border-0">
-                      <td className="py-2 px-4 font-bold text-blue-900 whitespace-nowrap">{agency.id}</td>
-                      <td className="py-2 px-4 text-gray-800 whitespace-nowrap">{agency.name}</td>
-                      <td className="py-2 px-4 text-right font-semibold text-blue-700 whitespace-nowrap">{agency.debt.toLocaleString('vi-VN')} đ</td>
+                  {topDebt.map((item, index) => (
+                    <tr key={item.id} className={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-blue-50' : 'bg-white'}`}>
+                      <td className="py-2 px-4 text-sm font-medium text-blue-900">{item.id}</td>
+                      <td className="py-2 px-4 text-sm text-gray-900">{item.name}</td>
+                      <td className="py-2 px-4 text-sm text-right font-semibold text-red-600">{formatCurrency(item.debt)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           </div>
-          {/* Biểu đồ công nợ theo thời gian – đã lược bỏ */}
         </div>
       </div>
     </DashboardLayout>
   );
 };
+
+
 
 export default StaffReportsPage;
